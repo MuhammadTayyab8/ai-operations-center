@@ -11,18 +11,21 @@ export interface LogEntry {
 export interface TimelineStep {
   label: string;
   status: 'pending' | 'active' | 'completed' | 'error';
+  receivedAt?: string;
 }
 
 interface AIWorkflowState {
   workflowId: string | null;
   isProcessing: boolean;
   isAwaitingApproval: boolean;
+  isComplete: boolean;
   currentStep: AgentStep;
   logs: LogEntry[];
   timelineSteps: TimelineStep[];
-  insight: any | null; // Output from the Insight Agent
-  approvalData: any | null; // Data to show in the approval modal
-  beforeAfterData: any | null; // Data to show in comparison card after execution
+  insight: any | null;
+  approvalData: any | null;
+  beforeAfterData: any | null;
+  completedAt: string | null;
 
   // Actions
   triggerWorkflow: (id: string) => void;
@@ -37,7 +40,7 @@ interface AIWorkflowState {
 }
 
 const DEFAULT_TIMELINE: TimelineStep[] = [
-  { label: 'Upload received', status: 'pending' },
+  { label: 'Workflow triggered', status: 'pending' },
   { label: 'Parsing report...', status: 'pending' },
   { label: 'Understanding business context...', status: 'pending' },
   { label: 'Detecting anomalies...', status: 'pending' },
@@ -52,67 +55,86 @@ export const useAIWorkflowStore = create<AIWorkflowState>((set) => ({
   workflowId: null,
   isProcessing: false,
   isAwaitingApproval: false,
+  isComplete: false,
   currentStep: 'intake',
   logs: [],
   timelineSteps: [...DEFAULT_TIMELINE],
   insight: null,
   approvalData: null,
   beforeAfterData: null,
+  completedAt: null,
 
   triggerWorkflow: (id) =>
     set({
       workflowId: id,
       isProcessing: true,
       isAwaitingApproval: false,
+      isComplete: false,
       currentStep: 'intake',
-      logs: [{ id: Date.now().toString(), timestamp: new Date().toLocaleTimeString(), message: 'Workflow triggered. Initializing Intake Agent...' }],
-      timelineSteps: DEFAULT_TIMELINE.map((t, i) => i === 0 ? { ...t, status: 'completed' } : { ...t, status: 'pending' }),
+      logs: [{
+        id: Date.now().toString(),
+        timestamp: new Date().toLocaleTimeString(),
+        message: 'Workflow triggered. Initializing AI pipeline...'
+      }],
+      timelineSteps: DEFAULT_TIMELINE.map((t, i) =>
+        i === 0 ? { ...t, status: 'active', receivedAt: new Date().toLocaleTimeString() } : { ...t, status: 'pending' }
+      ),
       insight: null,
       approvalData: null,
       beforeAfterData: null,
+      completedAt: null,
     }),
 
   addLog: (message) =>
     set((state) => {
-      // Find matching timeline step and mark it active, previous as completed
-      const newTimeline = [...state.timelineSteps];
+      const newTimeline = state.timelineSteps.map(t => ({ ...t }));
+      const now = new Date().toLocaleTimeString();
+
+      // Mark matching step as active, all previous as completed
       let foundIndex = -1;
-      
       for (let i = 0; i < newTimeline.length; i++) {
         if (newTimeline[i].label === message) {
           foundIndex = i;
-          newTimeline[i].status = 'active';
-          // Mark all previous as completed
+          newTimeline[i] = { ...newTimeline[i], status: 'active', receivedAt: now };
           for (let j = 0; j < i; j++) {
-            newTimeline[j].status = 'completed';
+            newTimeline[j] = { ...newTimeline[j], status: 'completed' };
           }
           break;
         }
       }
 
-      if (message === 'Workflow completed' && foundIndex !== -1) {
-          newTimeline[foundIndex].status = 'completed';
+      // Special: final completion marks everything done
+      if (message === 'Workflow completed') {
+        newTimeline.forEach((s, i) => {
+          newTimeline[i] = { ...s, status: 'completed', receivedAt: s.receivedAt || now };
+        });
       }
 
       return {
-        logs: [...state.logs, { id: Date.now().toString() + Math.random(), timestamp: new Date().toLocaleTimeString(), message }],
+        logs: [...state.logs, {
+          id: Date.now().toString() + Math.random(),
+          timestamp: now,
+          message
+        }],
         timelineSteps: newTimeline,
       };
     }),
 
   setStep: (step) => set({ currentStep: step }),
-  
+
   setInsight: (insight) => set({ insight }),
 
   requireApproval: (data) =>
     set({
       isAwaitingApproval: true,
+      isProcessing: false,
       approvalData: data,
     }),
 
   approveAction: () =>
     set({
       isAwaitingApproval: false,
+      isProcessing: true,
       currentStep: 'execution',
     }),
 
@@ -122,13 +144,21 @@ export const useAIWorkflowStore = create<AIWorkflowState>((set) => ({
       isProcessing: false,
       workflowId: null,
       logs: [],
+      timelineSteps: [...DEFAULT_TIMELINE],
+      insight: null,
+      approvalData: null,
+      beforeAfterData: null,
+      completedAt: null,
+      isComplete: false,
     }),
 
   finishExecution: (beforeAfter) =>
     set({
       isProcessing: false,
+      isComplete: true,
       beforeAfterData: beforeAfter,
       currentStep: 'execution',
+      completedAt: new Date().toLocaleTimeString(),
     }),
 
   reset: () =>
@@ -136,11 +166,13 @@ export const useAIWorkflowStore = create<AIWorkflowState>((set) => ({
       workflowId: null,
       isProcessing: false,
       isAwaitingApproval: false,
+      isComplete: false,
       currentStep: 'intake',
       logs: [],
       timelineSteps: [...DEFAULT_TIMELINE],
       insight: null,
       approvalData: null,
       beforeAfterData: null,
+      completedAt: null,
     }),
 }));

@@ -5,7 +5,7 @@ from app.streaming.sse_manager import sse_manager
 
 router = APIRouter(prefix="/streaming", tags=["Streaming"])
 
-@router.get("/workflow/{workflow_id}")
+@router.get("/workflows/{workflow_id}/stream")
 async def stream_workflow(workflow_id: str):
     async def event_generator():
         queue = sse_manager.get_queue(workflow_id)
