@@ -129,14 +129,12 @@ const CampaignCard = ({
           {/* Toggle active */}
           <TouchableOpacity
             onPress={() => onToggle(item)}
-            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: item.is_active ? '#FEF9C3' : '#DCFCE7', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 }}
+            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFF', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: '#E2E8F0' }}
           >
-            {item.is_active
-              ? <ToggleRight size={14} color="#CA8A04" />
-              : <ToggleLeft size={14} color="#16A34A" />}
-            <Text style={{ fontSize: 11, fontWeight: '700', color: item.is_active ? '#CA8A04' : '#16A34A', marginLeft: 5 }}>
-              {item.is_active ? 'Deactivate' : 'Activate'}
-            </Text>
+            <Text style={{ fontSize: 11, fontWeight: '700', color: '#475569', marginRight: 8 }}>{item.is_active ? 'Active' : 'Inactive'}</Text>
+            <View style={{ width: 34, height: 20, borderRadius: 10, backgroundColor: item.is_active ? '#16A34A' : '#CBD5E1', justifyContent: 'center', paddingHorizontal: 2 }}>
+              <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: '#FFF', alignSelf: item.is_active ? 'flex-end' : 'flex-start' }} />
+            </View>
           </TouchableOpacity>
           {/* Edit */}
           <TouchableOpacity

@@ -128,7 +128,8 @@ export const useAIWorkflowStore = create<AIWorkflowState>((set) => ({
     set({
       isAwaitingApproval: true,
       isProcessing: false,
-      approvalData: data,
+      approvalData: data.decision ? data.decision : data,
+      insight: data.insight ? data.insight : null,
     }),
 
   approveAction: () =>

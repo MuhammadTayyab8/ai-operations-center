@@ -144,6 +144,15 @@ const SalesFormModal = ({
     enabled: visible,
   });
 
+  // Dynamic delivery fee querying
+  const { data: deliveryFeeData } = useQuery<any>({
+    queryKey: ['delivery-fee'],
+    queryFn: salesApi.getDeliveryFee,
+    enabled: visible,
+  });
+
+  const dbDeliveryFee = deliveryFeeData?.delivery_fee ?? 200;
+
   const activeCampaign = useMemo(() => {
     return campaignsData.find(c => c.is_active && (c.region === city || c.region === 'All Regions'));
   }, [campaignsData, city]);
@@ -376,7 +385,7 @@ const SalesFormModal = ({
               const subtotal = items.reduce((sum, item) => sum + ((item.quantity || 0) * (item.unit_price || 0)), 0);
               const itemsDiscount = items.reduce((sum, item) => sum + (item.discount || 0), 0);
               const campaignDiscount = subtotal * (campaignDiscountPercent / 100);
-              const deliveryFee = orderType === 'Online Delivery' ? 200 : 0;
+              const deliveryFee = orderType === 'Online Delivery' ? dbDeliveryFee : 0;
               const totalAmount = Math.max(0, subtotal - itemsDiscount - campaignDiscount + deliveryFee);
 
               return (
@@ -457,25 +466,31 @@ const SaleCard = ({ sale, onEdit, onDelete }: { sale: Sale; onEdit: (s: Sale) =>
   const totalItems = sale.items.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
-    <View style={{ marginBottom: 12, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', padding: 16 }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+    <View style={{ 
+      marginBottom: 14, borderRadius: 16, backgroundColor: '#FFFFFF', padding: 16,
+      borderWidth: 1, borderColor: '#F1F5F9',
+      shadowColor: '#0F172A', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 3
+    }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
         <View style={{ flex: 1, marginRight: 12 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-            <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 }}>
-              <Text style={{ fontSize: 10, fontWeight: '600', color: '#64748B' }}>#{sale.id}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+            <View style={{ backgroundColor: '#F8FAFC', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: '#E2E8F0' }}>
+              <Text style={{ fontSize: 10, fontWeight: '700', color: '#64748B', letterSpacing: 0.5 }}>#{sale.id}</Text>
             </View>
-            <View style={{ backgroundColor: '#EFF6FF', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 }}>
-              <Text style={{ fontSize: 10, fontWeight: '600', color: '#2563EB' }}>{sale.type}</Text>
+            <View style={{ backgroundColor: '#EFF6FF', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
+              <Text style={{ fontSize: 10, fontWeight: '700', color: '#2563EB', letterSpacing: 0.5 }}>{sale.type.toUpperCase()}</Text>
             </View>
           </View>
-          <Text style={{ fontSize: 15, fontWeight: '700', color: '#0F172A', marginBottom: 4 }}>{sale.city}</Text>
-          <Text style={{ fontSize: 12, color: '#64748B' }}>{totalItems} items · {sale.created_at ? new Date(sale.created_at).toLocaleDateString() : 'Today'}</Text>
+          <Text style={{ fontSize: 16, fontWeight: '800', color: '#0F172A', marginBottom: 4 }}>{sale.city}</Text>
+          <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '500' }}>{totalItems} items · {sale.created_at ? new Date(sale.created_at).toLocaleDateString() : 'Today'}</Text>
         </View>
         
-        <View style={{ alignItems: 'flex-end' }}>
-          <Text style={{ fontSize: 16, fontWeight: '800', color: '#0F172A' }}>₨ {finalAmount.toLocaleString()}</Text>
+        <View style={{ alignItems: 'flex-end', justifyContent: 'center' }}>
+          <Text style={{ fontSize: 18, fontWeight: '900', color: '#0F172A' }}>₨ {finalAmount.toLocaleString()}</Text>
           {sale.discount_applied > 0 && (
-            <Text style={{ fontSize: 11, color: '#EF4444', marginTop: 2, fontWeight: '600' }}>-₨ {sale.discount_applied}</Text>
+            <Text style={{ fontSize: 11, color: '#EF4444', marginTop: 2, fontWeight: '700', backgroundColor: '#FEF2F2', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+              -₨ {sale.discount_applied}
+            </Text>
           )}
         </View>
       </View>

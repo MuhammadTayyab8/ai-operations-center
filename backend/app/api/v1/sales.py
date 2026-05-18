@@ -23,6 +23,14 @@ def get_sales(db: firestore.Client = Depends(get_db)):
         
     return sales
 
+@router.get("/delivery-fee")
+def get_delivery_fee_setting(db: firestore.Client = Depends(get_db)):
+    delivery_ref = db.collection("settings").document("delivery").get()
+    delivery_fee = 200.0
+    if delivery_ref.exists:
+        delivery_fee = delivery_ref.to_dict().get("default_delivery_fee", 200.0)
+    return {"delivery_fee": delivery_fee}
+
 @router.post("/", response_model=SaleResponse)
 def create_sale(sale_data: SaleCreate, db: firestore.Client = Depends(get_db)):
     # Calculate total and reduce inventory

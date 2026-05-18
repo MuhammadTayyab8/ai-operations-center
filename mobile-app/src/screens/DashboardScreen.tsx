@@ -193,7 +193,7 @@ const LowStockSection = () => {
   return (
     <View className="mx-5 mb-6">
       <View className="flex-row justify-between items-center mb-3">
-        <Text style={{ fontSize: 16, fontWeight: '700', color: '#0F172A' }}>⚠ Low Stock Alerts</Text>
+        <Text style={{ fontSize: 16, fontWeight: '700', color: '#0F172A' }}>Low Stock Alerts</Text>
         <Text style={{ fontSize: 12, color: '#EA580C', fontWeight: '600' }}>{items.length} items</Text>
       </View>
       <View className="rounded-2xl overflow-hidden" style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#FED7AA' }}>
@@ -251,7 +251,7 @@ const HighDemandSection = () => {
   return (
     <View className="mx-5 mb-6">
       <View className="flex-row justify-between items-center mb-3">
-        <Text style={{ fontSize: 16, fontWeight: '700', color: '#0F172A' }}>🔥 High Demand Products</Text>
+        <Text style={{ fontSize: 16, fontWeight: '700', color: '#0F172A' }}>High Demand Products</Text>
         <View className="flex-row items-center">
           <Flame size={13} color="#EA580C" />
           <Text style={{ fontSize: 12, color: '#EA580C', fontWeight: '600', marginLeft: 3 }}>Top {items.length}</Text>
@@ -326,6 +326,11 @@ const RecentAIActionsSection = () => {
           const s = ACTION_STATUS_CONFIG[statusMapped] || ACTION_STATUS_CONFIG.insight;
           const timeFormatted = item.created_at ? new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now';
 
+          // Robust fallback mapping for the new Orchestrator payload schema
+          const title = item.action_log?.action_category || item.context_data?.decision?.action_type || item.name || 'AI Insight Generation';
+          const description = item.action_log?.log_message || item.context_data?.insight?.summary || item.description || 'AI analyzed business context and formulated a recommendation.';
+          const projectedImpact = item.context_data?.decision?.expected_impact || item.projected_impact || null;
+
           return (
             <View key={item.id || index} className="flex-row">
               <View className="items-center mr-3" style={{ width: 32 }}>
@@ -334,13 +339,13 @@ const RecentAIActionsSection = () => {
               </View>
               <View className="flex-1 pb-5">
                 <View className="flex-row justify-between items-center mb-1">
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }}>{item.name}</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A', textTransform: 'capitalize' }}>{title.replace(/_/g, ' ')}</Text>
                   <Text style={{ fontSize: 11, color: '#94A3B8' }}>{timeFormatted}</Text>
                 </View>
-                <Text style={{ fontSize: 12, lineHeight: 17, color: '#475569', marginBottom: 6 }}>{item.description}</Text>
-                {item.projected_impact && (
+                <Text style={{ fontSize: 12, lineHeight: 17, color: '#475569', marginBottom: 6 }}>{description}</Text>
+                {projectedImpact && (
                   <View className="self-start px-2 py-0.5 rounded-full" style={{ backgroundColor: s.bg }}>
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: s.color }}>{item.projected_impact}</Text>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: s.color }}>{projectedImpact}</Text>
                   </View>
                 )}
               </View>

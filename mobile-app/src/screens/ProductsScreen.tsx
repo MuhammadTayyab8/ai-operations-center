@@ -234,7 +234,7 @@ const ProductFormModal = ({
         })),
       };
       if (isEdit && editProduct) {
-        await productsApi.update(editProduct.id, { name: payload.name, sku: payload.sku, base_price: payload.base_price, category: payload.category });
+        await productsApi.update(editProduct.id, payload);
       } else {
         await productsApi.create(payload);
       }

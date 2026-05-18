@@ -21,7 +21,7 @@ import { workflowsApi } from '../api/endpoints';
 import { BASE_URL } from '../api/client';
 
 const { width } = Dimensions.get('window');
-const CARD_WIDTH = (width - 48) / 2; // 2-column grid with 20px padding each side + 8px gap
+const CARD_WIDTH = (width - 40) / 2; // 2-column grid with 20px padding each side + 8px gap
 
 const CATEGORIES = [
   { id: 'sales_risk', title: 'Sales Risk\nDetection', icon: ShieldAlert, color: '#EF4444', bg: '#FEF2F2', border: '#FECACA' },
@@ -41,7 +41,8 @@ export const OperationsCenterScreen = () => {
   const {
     workflowId, isProcessing, isAwaitingApproval, isComplete,
     triggerWorkflow, addLog, setStep, requireApproval,
-    approvalData, beforeAfterData, finishExecution, reset
+    approvalData, beforeAfterData, finishExecution, reset,
+    approveAction, rejectAction
   } = useAIWorkflowStore();
 
   const handlePickFile = async () => {
@@ -137,22 +138,35 @@ export const OperationsCenterScreen = () => {
     setSelectedCategory(null);
   };
 
-  // Listen for approval to auto-approve & restart execution stream
+  // Listen for approval data so we can update the store properly when SSE closes and wait for user click
   useEffect(() => {
     if (workflowId && !isProcessing && beforeAfterData === null && approvalData && isAwaitingApproval) {
-      const finalize = async () => {
-        addLog('Approval received. Executing actions...');
-        setStep('execution');
-        try {
-          await workflowsApi.approve(workflowId, true);
-          startStream(workflowId);
-        } catch (err) {
-          console.error(err);
-        }
-      };
-      finalize();
+      console.log('Approval data ready, waiting for user click.');
     }
-  }, [isAwaitingApproval, approvalData]);
+  }, [isAwaitingApproval, approvalData, workflowId, isProcessing, beforeAfterData]);
+
+  const handleApproveAction = async () => {
+    if (!workflowId) return;
+    addLog('Approval received. Executing actions...');
+    setStep('execution');
+    approveAction();
+    try {
+      await workflowsApi.approve(workflowId, true);
+      startStream(workflowId);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleRejectAction = async () => {
+    if (!workflowId) return;
+    try {
+      await workflowsApi.approve(workflowId, false);
+      rejectAction();
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   // Clean up SSE on unmount
   useEffect(() => {
@@ -167,7 +181,7 @@ export const OperationsCenterScreen = () => {
     <ScreenWrapper noPadding>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120, paddingHorizontal: 12 }}
+        contentContainerStyle={{ paddingBottom: 120, paddingHorizontal: 20 }}
       >
         {/* ─── Header ────────────────────────────────────────────── */}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, paddingTop: 4 }}>
@@ -199,7 +213,7 @@ export const OperationsCenterScreen = () => {
                     key={cat.id}
                     onPress={() => setSelectedCategory(cat.id === selectedCategory ? null : cat.id)}
                     style={{
-                      width: CARD_WIDTH,
+                      width: '48%',
                       padding: 16,
                       borderRadius: 16,
                       borderWidth: 1.5,
@@ -346,7 +360,11 @@ export const OperationsCenterScreen = () => {
             <InsightSection />
 
             {/* Approval / Recommendation Card */}
-            <RecommendationCard />
+            <RecommendationCard
+              workflowId={workflowId}
+              onApprove={handleApproveAction}
+              onReject={handleRejectAction}
+            />
 
             {/* Completion Card (replaces the old "Start New Workflow" button) */}
             <StateComparisonCard />
@@ -364,6 +382,23 @@ export const OperationsCenterScreen = () => {
               >
                 <Text style={{ fontSize: 14, fontWeight: '600', color: '#64748B' }}>
                   ← Back to New Workflow
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Cancel Button - available while processing or awaiting approval */}
+            {workflowStarted && !isComplete && (isProcessing || isAwaitingApproval) && (
+              <TouchableOpacity
+                onPress={handleReset}
+                style={{
+                  marginTop: 16, borderRadius: 16, paddingVertical: 14,
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                  borderWidth: 1, borderColor: '#FEE2E2', backgroundColor: '#FEF2F2',
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#DC2626' }}>
+                  Cancel Workflow
                 </Text>
               </TouchableOpacity>
             )}

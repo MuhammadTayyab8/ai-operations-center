@@ -83,13 +83,21 @@ export const ReportsScreen = () => {
       if (selectedDatePreset === 'All Time') return true;
       if (!sale.created_at) return true;
 
-      const saleDate = new Date(sale.created_at);
+      const saleDateStr = sale.created_at.split('T')[0]; // "YYYY-MM-DD"
       const today = new Date();
-      const diffTime = Math.abs(today.getTime() - saleDate.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      const getPastDateStr = (days: number) => {
+        const d = new Date(today);
+        d.setDate(d.getDate() - days);
+        return d.toISOString().split('T')[0];
+      };
 
-      if (selectedDatePreset === 'Last 7 Days') return diffDays <= 7;
-      if (selectedDatePreset === 'Last 30 Days') return diffDays <= 30;
+      if (selectedDatePreset === 'Last 7 Days') {
+        return saleDateStr >= getPastDateStr(7);
+      }
+      if (selectedDatePreset === 'Last 30 Days') {
+        return saleDateStr >= getPastDateStr(30);
+      }
       return true;
     });
   }, [sales, selectedCity, selectedDatePreset]);
@@ -328,7 +336,7 @@ export const ReportsScreen = () => {
               const fileUri = `${docDirectory}${fileName}`;
               
               await FileSystem.writeAsStringAsync(fileUri, fileContent, {
-                encoding: (FileSystem as any).EncodingType.UTF8
+                encoding: FileSystem.EncodingType.UTF8
               });
               
               const sharingAvailable = await Sharing.isAvailableAsync();
@@ -495,7 +503,10 @@ export const ReportsScreen = () => {
 
         {/* Deliveries Ledger Card representing deliveries details */}
         <View style={{ backgroundColor: '#F8FAFC', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#E2E8F0' }}>
-          <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A', marginBottom: 12 }}>📦 Dispatch Notification Log</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+            <Package size={14} color="#0F172A" />
+            <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A', marginLeft: 6 }}>Dispatch Notification Log</Text>
+          </View>
           {filteredSales.filter(s => s.type === 'Online Delivery').map((sale, idx) => (
             <View key={sale.id || idx} style={{ backgroundColor: '#FFF', borderRadius: 12, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: '#E2E8F0' }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>

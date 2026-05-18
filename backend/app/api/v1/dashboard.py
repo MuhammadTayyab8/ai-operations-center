@@ -181,11 +181,12 @@ def get_weekly_sales(db: firestore.Client = Depends(get_db)):
         if not created_at_str: continue
         
         try:
-            created_at_date = datetime.fromisoformat(created_at_str.replace("Z", "+00:00")).strftime("%Y-%m-%d")
+            # Safely get the YYYY-MM-DD from created_at
+            created_at_date = created_at_str[:10]
             if created_at_date in daily_data:
                 daily_data[created_at_date]["revenue"] += sale.get("total_amount", 0.0)
                 daily_data[created_at_date]["orders"] += 1
-        except ValueError:
+        except Exception:
             pass
             
     # Build list in chronological order
