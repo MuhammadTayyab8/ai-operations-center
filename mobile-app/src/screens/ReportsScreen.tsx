@@ -10,6 +10,8 @@ import {
 } from 'lucide-react-native';
 import { ScreenWrapper } from '../components/layout/ScreenWrapper';
 import { salesApi, productsApi, dashboardApi } from '../api/endpoints';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 
 // ─── Constants & Types ────────────────────────────────────────────────────────
 
@@ -29,7 +31,7 @@ interface Sale {
   delivery_address?: string;
 }
 
-interface Product { id: number; name: string; sku: string; base_price: number; inventory: any[]; }
+interface Product { id: string | number; name: string; sku: string; base_price: number; category?: string; inventory: any[]; }
 
 // Helper for total inventory stock
 const getProductStock = (p: Product) => {
@@ -69,26 +71,7 @@ export const ReportsScreen = () => {
     setExporting(true);
   };
 
-  useEffect(() => {
-    if (!exporting) return;
-    const interval = setInterval(() => {
-      setExportProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setTimeout(() => {
-            setExporting(false);
-            Alert.alert(
-              'Document Generated',
-              `Professional ${exportType} Report has been successfully exported to device local storage.`
-            );
-          }, 400);
-          return 100;
-        }
-        return prev + 10;
-      });
-    }, 150);
-    return () => clearInterval(interval);
-  }, [exporting, exportType]);
+
 
   // ─── Filter Logic ───────────────────────────────────────────────────────────
   const filteredSales = useMemo(() => {
@@ -151,6 +134,225 @@ export const ReportsScreen = () => {
     const highRiskCount = list.filter((c: any) => c.status === 'At Risk' || c.risk_score === 'High').length;
     return { totalSpend, highRiskCount };
   }, [crmData]);
+
+  // ─── CSV Document Generator ────────────────────────────────────────────────
+  const generateCSVContent = () => {
+    let headers = '';
+    const rows: string[] = [];
+
+    if (activeReport === 'sales') {
+      headers = 'Invoice ID,Order Type,City,Total Items,Discount Applied,Gross Total,Net Total,Created At\n';
+      filteredSales.forEach(s => {
+        const gross = s.items?.reduce((sum, i) => sum + (i.unit_price * i.quantity), 0) || 0;
+        const net = Math.max(0, gross - (s.discount_applied || 0));
+        const totalItems = s.items?.reduce((sum, i) => sum + i.quantity, 0) || 0;
+        const safeId = (s.id || '').toString().replace(/,/g, '');
+        
+        rows.push(`${safeId},"${s.type}","${s.city}",${totalItems},${s.discount_applied || 0},${gross},${net},"${s.created_at || 'N/A'}"`);
+      });
+    } else if (activeReport === 'inventory') {
+      headers = 'Product ID,Name,SKU,Category,Total Stock,Karachi,Lahore,Islamabad,Peshawar\n';
+      products.forEach(p => {
+        const totalStock = getProductStock(p);
+        const getCityStock = (city: string) => {
+          const inv = p.inventory?.find((i: any) => i.city === city);
+          return inv ? inv.quantity : 0;
+        };
+        const safeId = (p.id || '').toString().replace(/,/g, '');
+        const safeName = (p.name || '').replace(/"/g, '""').replace(/,/g, ' ');
+        rows.push(`"${safeId}","${safeName}","${p.sku || ''}","${p.category || ''}",${totalStock},${getCityStock('Karachi')},${getCityStock('Lahore')},${getCityStock('Islamabad')},${getCityStock('Peshawar')}`);
+      });
+    } else if (activeReport === 'customers') {
+      headers = 'Customer ID,Name,City,Phone,Email,Total Orders,Total Spent,Risk Score,Status,Last Order\n';
+      customersList.forEach(c => {
+        const safeId = (c.id || '').toString().replace(/,/g, '');
+        const safeName = (c.name || '').replace(/"/g, '""').replace(/,/g, ' ');
+        rows.push(`"${safeId}","${safeName}","${c.city || ''}","${c.phone || ''}","${c.email || ''}",${c.total_orders || 0},${c.total_spent || 0},"${c.risk_score || ''}","${c.status || ''}","${c.last_order || ''}"`);
+      });
+    }
+
+    return headers + rows.join('\n');
+  };
+
+  // ─── HTML/Print Document Generator ─────────────────────────────────────────
+  const generateHTMLContent = () => {
+    let body = '';
+    const dateStr = new Date().toLocaleString();
+
+    if (activeReport === 'sales') {
+      body = `
+        <h1 style="color: #2563EB;">Sales Ledger Report</h1>
+        <p><strong>Generated On:</strong> ${dateStr}</p>
+        <p><strong>Total Gross Revenue:</strong> PKR ${salesSummary.gross.toLocaleString()}</p>
+        <p><strong>Total Discounts:</strong> PKR ${salesSummary.discount.toLocaleString()}</p>
+        <p><strong>Net Revenue:</strong> PKR ${salesSummary.net.toLocaleString()}</p>
+        <p><strong>Total Invoices:</strong> ${salesSummary.count}</p>
+        <table border="1" cellpadding="8" style="border-collapse: collapse; width: 100%; margin-top: 20px;">
+          <tr style="background-color: #F8FAFC;">
+            <th>Invoice ID</th>
+            <th>Type</th>
+            <th>City</th>
+            <th>Total Items</th>
+            <th>Discount</th>
+            <th>Net Amount</th>
+          </tr>
+          ${filteredSales.map(s => {
+            const gross = s.items?.reduce((sum, i) => sum + (i.unit_price * i.quantity), 0) || 0;
+            const net = Math.max(0, gross - (s.discount_applied || 0));
+            const totalItems = s.items?.reduce((sum, i) => sum + i.quantity, 0) || 0;
+            return `
+              <tr>
+                <td>${s.id || 'N/A'}</td>
+                <td>${s.type}</td>
+                <td>${s.city}</td>
+                <td align="center">${totalItems}</td>
+                <td align="right">PKR ${s.discount_applied || 0}</td>
+                <td align="right"><strong>PKR ${net.toLocaleString()}</strong></td>
+              </tr>
+            `;
+          }).join('')}
+        </table>
+      `;
+    } else if (activeReport === 'inventory') {
+      body = `
+        <h1 style="color: #2563EB;">Regional Inventory Stock Report</h1>
+        <p><strong>Generated On:</strong> ${dateStr}</p>
+        <p><strong>Total Items in Stock:</strong> ${inventorySummary.totalStock.toLocaleString()} units</p>
+        <p><strong>Low Stock SKUs:</strong> ${inventorySummary.lowStockCount}</p>
+        <p><strong>Unique SKU count:</strong> ${inventorySummary.totalSkus}</p>
+        <table border="1" cellpadding="8" style="border-collapse: collapse; width: 100%; margin-top: 20px;">
+          <tr style="background-color: #F8FAFC;">
+            <th>Product ID</th>
+            <th>Name</th>
+            <th>SKU</th>
+            <th>Category</th>
+            <th>Total Stock</th>
+            <th>Karachi</th>
+            <th>Lahore</th>
+            <th>Islamabad</th>
+            <th>Peshawar</th>
+          </tr>
+          ${products.map(p => {
+            const totalStock = getProductStock(p);
+            const getCityStock = (city: string) => {
+              const inv = p.inventory?.find((i: any) => i.city === city);
+              return inv ? inv.quantity : 0;
+            };
+            return `
+              <tr>
+                <td>${p.id}</td>
+                <td>${p.name}</td>
+                <td>${p.sku}</td>
+                <td>${p.category || 'N/A'}</td>
+                <td align="center"><strong>${totalStock}</strong></td>
+                <td align="center">${getCityStock('Karachi')}</td>
+                <td align="center">${getCityStock('Lahore')}</td>
+                <td align="center">${getCityStock('Islamabad')}</td>
+                <td align="center">${getCityStock('Peshawar')}</td>
+              </tr>
+            `;
+          }).join('')}
+        </table>
+      `;
+    } else if (activeReport === 'customers') {
+      body = `
+        <h1 style="color: #2563EB;">Registered Customer Database & CRM Report</h1>
+        <p><strong>Generated On:</strong> ${dateStr}</p>
+        <p><strong>Total Clients:</strong> ${customersList.length}</p>
+        <p><strong>At-Risk / High Risk Clients:</strong> ${crmSummary.highRiskCount}</p>
+        <p><strong>Net Spending:</strong> PKR ${crmSummary.totalSpend.toLocaleString()}</p>
+        <table border="1" cellpadding="8" style="border-collapse: collapse; width: 100%; margin-top: 20px;">
+          <tr style="background-color: #F8FAFC;">
+            <th>Customer ID</th>
+            <th>Name</th>
+            <th>City</th>
+            <th>Phone</th>
+            <th>Email</th>
+            <th>Orders</th>
+            <th>Total spent</th>
+            <th>Risk Rating</th>
+          </tr>
+          ${customersList.map(c => `
+            <tr>
+              <td>${c.id}</td>
+              <td>${c.name}</td>
+              <td>${c.city}</td>
+              <td>${c.phone}</td>
+              <td>${c.email}</td>
+              <td align="center">${c.total_orders}</td>
+              <td align="right">PKR ${c.total_spent.toLocaleString()}</td>
+              <td align="center" style="color: ${c.risk_score === 'High' ? '#EF4444' : c.risk_score === 'Medium' ? '#F59E0B' : '#10B981'}; font-weight: bold;">
+                ${c.risk_score}
+              </td>
+            </tr>
+          `).join('')}
+        </table>
+      `;
+    }
+
+    return `
+      <html>
+        <head>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 20px; color: #1E293B; }
+            th { text-align: left; background-color: #F1F5F9; border-bottom: 2px solid #CBD5E1; text-transform: uppercase; font-size: 11px; color: #475569; }
+            td, th { padding: 10px; border-bottom: 1px solid #E2E8F0; font-size: 13px; }
+          </style>
+        </head>
+        <body>
+          <div style="border-bottom: 3px solid #2563EB; padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 20px; font-weight: 800; color: #0F172A;">NexusForge AI Operations Center</span>
+          </div>
+          ${body}
+        </body>
+      </html>
+    `;
+  };
+
+  useEffect(() => {
+    if (!exporting) return;
+    const interval = setInterval(() => {
+      setExportProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          setTimeout(async () => {
+            setExporting(false);
+            
+            try {
+              const isPDF = exportType === 'PDF';
+              const fileExtension = isPDF ? 'html' : 'csv';
+              const mimeType = isPDF ? 'text/html' : 'text/csv';
+              const fileContent = isPDF ? generateHTMLContent() : generateCSVContent();
+              const fileName = `${activeReport}_report_${Date.now()}.${fileExtension}`;
+              const docDirectory = (FileSystem as any).documentDirectory;
+              const fileUri = `${docDirectory}${fileName}`;
+              
+              await FileSystem.writeAsStringAsync(fileUri, fileContent, {
+                encoding: (FileSystem as any).EncodingType.UTF8
+              });
+              
+              const sharingAvailable = await Sharing.isAvailableAsync();
+              if (sharingAvailable) {
+                await Sharing.shareAsync(fileUri, {
+                  mimeType: mimeType,
+                  dialogTitle: `Export ${exportType} Report`,
+                  UTI: isPDF ? 'public.html' : 'public.comma-separated-values-text'
+                });
+              } else {
+                Alert.alert('Unsupported', 'Sharing is not supported on this device platform.');
+              }
+            } catch (err) {
+              console.log('Error generating or sharing report:', err);
+              Alert.alert('Export Failed', 'An error occurred while compiling and saving the document.');
+            }
+          }, 400);
+          return 100;
+        }
+        return prev + 10;
+      });
+    }, 150);
+    return () => clearInterval(interval);
+  }, [exporting, exportType, activeReport, filteredSales, products, customersList, salesSummary, inventorySummary, crmSummary]);
 
   // ─── Render Sub-components ─────────────────────────────────────────────────
 
