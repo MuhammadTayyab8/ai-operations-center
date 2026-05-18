@@ -37,3 +37,12 @@ class HighDemandItem(BaseModel):
 
 class HighDemandResponse(BaseModel):
     items: List[HighDemandItem]
+
+class WeeklySalesPoint(BaseModel):
+    day: str  # e.g. "Mon", "Tue"
+    revenue: float
+    orders: int
+
+class WeeklySalesResponse(BaseModel):
+    data: List[WeeklySalesPoint]
+

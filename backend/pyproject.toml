@@ -14,4 +14,6 @@ dependencies = [
     "python-dotenv>=1.2.2",
     "uvicorn>=0.47.0",
     "firebase-admin>=6.5.0",
+    "python-multipart>=0.0.28",
+    "pypdf2>=3.0.1",
 ]

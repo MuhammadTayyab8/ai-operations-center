@@ -3,13 +3,16 @@ from google.genai import types
 from app.schemas.agents import IntakeClassification, InsightResult
 import json
 
-def generate_insights(client: genai.Client, classification: IntakeClassification, sales_data: str, inventory_data: str, model: str = "gemini-2.5-flash") -> InsightResult:
+def generate_insights(client: genai.Client, classification: IntakeClassification, sales_data: str, inventory_data: str, combined_input: str, model: str = "gemini-2.5-flash") -> InsightResult:
     prompt = f"""
     You are the Insight Agent. 
-    Analyze the classified user intent alongside the current sales and inventory data from the Pandas data warehouse.
+    Analyze the classified user intent alongside the current sales and inventory data from the Pandas data warehouse, and any extracted file/text content.
     Identify anomalies, trends, and actionable insights.
     
     User Intent & Domain: {classification.model_dump_json()}
+    
+    Extracted Context / User Input / File Content:
+    {combined_input}
     
     Current Sales Data (Aggregated by City):
     {sales_data}

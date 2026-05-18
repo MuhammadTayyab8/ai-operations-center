@@ -82,6 +82,15 @@ async def execute_action(db: firestore.Client, action: DecisionAction) -> str:
             
         return "Inventory location not found."
         
+    elif action_type == 'update_delivery_fee':
+        new_fee = details.get('new_fee')
+        city = details.get('city', 'Global')
+        if new_fee is not None:
+            doc_ref = db.collection("settings").document("delivery")
+            doc_ref.set({"default_delivery_fee": float(new_fee), "city": city}, merge=True)
+            return f"Updated delivery fee to ₨{new_fee} for {city}."
+        return "Missing new_fee parameter."
+        
     elif action_type == 'no_action':
         return "No action required based on current insights."
         

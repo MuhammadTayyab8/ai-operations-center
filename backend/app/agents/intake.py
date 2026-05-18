@@ -8,7 +8,7 @@ class GuardrailException(Exception):
         self.reason = reason
         super().__init__(f"Guardrail check failed: {reason}")
 
-def analyze_input(client: genai.Client, user_input: str, model: str = "gemini-2.5-flash") -> IntakeClassification:
+def analyze_input(client: genai.Client, user_input: str, category: str = None, model: str = "gemini-2.5-flash") -> IntakeClassification:
     # 1. Run guardrails
     guardrail_result = check_guardrails(client, user_input, model)
     if not guardrail_result.is_safe:
@@ -17,9 +17,12 @@ def analyze_input(client: genai.Client, user_input: str, model: str = "gemini-2.
     # 2. Classify input
     prompt = f"""
     You are the Intake Agent for an AI Operations Center.
-    Analyze the user input and extract the intent, domain, and any relevant entities (e.g., product names, cities like Karachi, numbers).
+    Analyze the user input, extracted file data, and explicitly requested category to extract the intent, domain, and any relevant entities (e.g., product names, cities like Karachi, numbers, extracted text).
     
-    User Input: "{user_input}"
+    Requested Category: "{category or 'Auto-detect'}"
+    Combined Input & Data: "{user_input}"
+    
+    Return the domain matching the category if provided, otherwise auto-detect it.
     """
     
     response = client.models.generate_content(

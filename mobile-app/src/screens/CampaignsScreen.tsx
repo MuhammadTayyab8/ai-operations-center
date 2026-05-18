@@ -261,7 +261,36 @@ const CampaignFormModal = ({
                 <InputField label="Discount % *" value={form.discount_percent} onChangeText={(v: string) => setForm(f => ({ ...f, discount_percent: v }))} placeholder="e.g. 18" keyboardType="numeric" />
               </View>
             </View>
-            <InputField label="Region *" value={form.region} onChangeText={(v: string) => setForm(f => ({ ...f, region: v }))} placeholder="e.g. Karachi, All Regions" />
+            <View style={{ marginBottom: 16 }}>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.4 }}>Region *</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {['Karachi', 'Lahore', 'Islamabad', 'Peshawar', 'All Regions'].map((city) => {
+                  const isSelected = form.region === city;
+                  return (
+                    <TouchableOpacity
+                      key={city}
+                      onPress={() => setForm(f => ({ ...f, region: city }))}
+                      activeOpacity={0.7}
+                      style={{
+                        paddingHorizontal: 14,
+                        paddingVertical: 8,
+                        borderRadius: 20,
+                        borderWidth: 1.5,
+                        backgroundColor: isSelected ? '#EFF6FF' : '#FFFFFF',
+                        borderColor: isSelected ? '#2563EB' : '#E2E8F0',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <MapPin size={12} color={isSelected ? '#2563EB' : '#94A3B8'} style={{ marginRight: 5 }} />
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: isSelected ? '#2563EB' : '#475569' }}>
+                        {city}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
             <InputField label="Projected Impact" value={form.projected_impact} onChangeText={(v: string) => setForm(f => ({ ...f, projected_impact: v }))} placeholder="e.g. +₨82,000 revenue" />
             {/* AI Generated toggle */}
             <TouchableOpacity

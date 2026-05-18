@@ -9,7 +9,7 @@ import {
   Search, Plus, Pencil, Trash2, X, MapPin, Store, Calendar, FileText, Package, ShoppingCart
 } from 'lucide-react-native';
 import { ScreenWrapper } from '../components/layout/ScreenWrapper';
-import { productsApi, salesApi } from '../api/endpoints';
+import { productsApi, salesApi, campaignsApi } from '../api/endpoints';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -127,8 +127,28 @@ const SalesFormModal = ({
   const [items, setItems] = useState<SaleItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [productModalVisible, setProductModalVisible] = useState(false);
+  
+  // Custom delivery order states
+  const [customerName, setCustomerName] = useState('');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [customerEmail, setCustomerEmail] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [calendarVisible, setCalendarVisible] = useState(false);
 
   const isEdit = !!editSale;
+
+  // Dynamic campaign discount querying
+  const { data: campaignsData = [] } = useQuery<any[]>({
+    queryKey: ['campaigns'],
+    queryFn: campaignsApi.getAll,
+    enabled: visible,
+  });
+
+  const activeCampaign = useMemo(() => {
+    return campaignsData.find(c => c.is_active && (c.region === city || c.region === 'All Regions'));
+  }, [campaignsData, city]);
+
+  const campaignDiscountPercent = activeCampaign ? activeCampaign.discount_percent : 0;
 
   useEffect(() => {
     if (editSale) {
@@ -137,14 +157,22 @@ const SalesFormModal = ({
       setCity(editSale.city);
       setItems(editSale.items.map(i => ({
         ...i,
-        discount: 0, // In original model discount_applied was global, but we map it per item in UI for new additions.
+        discount: 0,
         product: products.find(p => p.id === i.product_id)
       })));
+      setCustomerName((editSale as any).customer_name || '');
+      setDeliveryAddress((editSale as any).delivery_address || '');
+      setCustomerEmail((editSale as any).customer_email || '');
+      setCustomerPhone((editSale as any).customer_phone || '');
     } else {
       setDate(new Date().toISOString().split('T')[0]);
       setOrderType(ORDER_TYPES[0]);
       setCity(CITIES[0]);
       setItems([]);
+      setCustomerName('');
+      setDeliveryAddress('');
+      setCustomerEmail('');
+      setCustomerPhone('');
     }
   }, [editSale, visible, products]);
 
@@ -153,19 +181,29 @@ const SalesFormModal = ({
       Alert.alert('Validation', 'Please add at least one product.');
       return;
     }
+    if (orderType === 'Online Delivery' && (!customerName.trim() || !deliveryAddress.trim())) {
+      Alert.alert('Validation', 'Please fill in Customer Name and Delivery Address.');
+      return;
+    }
     setSaving(true);
     try {
-      const totalDiscount = items.reduce((sum, item) => sum + (item.discount || 0), 0);
+      const subtotal = items.reduce((sum, item) => sum + ((item.quantity || 0) * (item.unit_price || 0)), 0);
+      const itemsDiscount = items.reduce((sum, item) => sum + (item.discount || 0), 0);
+      const campaignDiscount = subtotal * (campaignDiscountPercent / 100);
       
       const payload = {
         type: orderType,
         city: city,
-        discount_applied: totalDiscount,
+        discount_applied: itemsDiscount + campaignDiscount,
         items: items.map(i => ({
           product_id: i.product_id,
           quantity: i.quantity,
           unit_price: i.unit_price,
-        }))
+        })),
+        customer_name: orderType === 'Online Delivery' ? customerName.trim() : null,
+        delivery_address: orderType === 'Online Delivery' ? deliveryAddress.trim() : null,
+        customer_phone: orderType === 'Online Delivery' ? customerPhone.trim() : null,
+        customer_email: orderType === 'Online Delivery' ? customerEmail.trim() : null,
       };
       
       if (isEdit && editSale) {
@@ -207,7 +245,28 @@ const SalesFormModal = ({
           <ScrollView contentContainerStyle={{ padding: 20 }} showsVerticalScrollIndicator={false}>
             <Text style={{ fontSize: 12, fontWeight: '700', color: '#2563EB', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 14 }}>Sale Details</Text>
             
-            <InputField label="Date *" value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
+            {/* Custom Visual Date Picker Trigger */}
+            <View style={{ marginBottom: 14 }}>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.4 }}>Date *</Text>
+              <TouchableOpacity
+                onPress={() => setCalendarVisible(true)}
+                activeOpacity={0.7}
+                style={{
+                  backgroundColor: '#F8FAFC',
+                  borderWidth: 1,
+                  borderColor: '#E2E8F0',
+                  borderRadius: 12,
+                  paddingHorizontal: 14,
+                  paddingVertical: 13,
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <Text style={{ fontSize: 14, color: '#0F172A', fontWeight: '500' }}>{date}</Text>
+                <Calendar size={16} color="#2563EB" />
+              </TouchableOpacity>
+            </View>
             
             <View style={{ marginBottom: 14 }}>
               <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.4 }}>Order Type</Text>
@@ -225,7 +284,7 @@ const SalesFormModal = ({
 
             <View style={{ marginBottom: 20 }}>
               <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.4 }}>Location</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row' }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row', marginBottom: 6 }}>
                 {CITIES.map(c => (
                   <TouchableOpacity
                     key={c} onPress={() => setCity(c)}
@@ -235,7 +294,33 @@ const SalesFormModal = ({
                   </TouchableOpacity>
                 ))}
               </ScrollView>
+              
+              {/* Campaign Discount Activation Badge */}
+              {activeCampaign && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#EFF6FF', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, marginTop: 8, borderWidth: 1, borderColor: '#BFDBFE' }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#2563EB' }}>
+                    🔥 {activeCampaign.name}: {activeCampaign.discount_percent}% Off applied for {city}!
+                  </Text>
+                </View>
+              )}
             </View>
+
+            {/* Dynamic Customer Delivery Details Card */}
+            {orderType === 'Online Delivery' && (
+              <View style={{ marginBottom: 20, padding: 16, backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E2E8F0', shadowColor: '#0F172A', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#2563EB', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 12 }}>Customer & Delivery Info</Text>
+                <InputField label="Customer Name *" value={customerName} onChangeText={setCustomerName} placeholder="e.g. Muhammad Tayyab" />
+                <InputField label="Delivery Address *" value={deliveryAddress} onChangeText={setDeliveryAddress} placeholder="e.g. House 45, Street 2, Clifton, Karachi" />
+                <View style={{ flexDirection: 'row', gap: 12 }}>
+                  <View style={{ flex: 1 }}>
+                    <InputField label="Email Address" value={customerEmail} onChangeText={setCustomerEmail} placeholder="tayyab@example.com" keyboardType="email-address" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <InputField label="Phone Number" value={customerPhone} onChangeText={setCustomerPhone} placeholder="0333-1234567" keyboardType="phone-pad" />
+                  </View>
+                </View>
+              </View>
+            )}
 
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, marginTop: 10 }}>
               <Text style={{ fontSize: 12, fontWeight: '700', color: '#2563EB', textTransform: 'uppercase', letterSpacing: 0.8 }}>Products</Text>
@@ -287,6 +372,50 @@ const SalesFormModal = ({
               </View>
             )}
 
+            {items.length > 0 && (() => {
+              const subtotal = items.reduce((sum, item) => sum + ((item.quantity || 0) * (item.unit_price || 0)), 0);
+              const itemsDiscount = items.reduce((sum, item) => sum + (item.discount || 0), 0);
+              const campaignDiscount = subtotal * (campaignDiscountPercent / 100);
+              const deliveryFee = orderType === 'Online Delivery' ? 200 : 0;
+              const totalAmount = Math.max(0, subtotal - itemsDiscount - campaignDiscount + deliveryFee);
+
+              return (
+                <View style={{ marginTop: 12, padding: 16, backgroundColor: '#F8FAFC', borderRadius: 16, borderWidth: 1, borderColor: '#E2E8F0', shadowColor: '#0F172A', shadowOpacity: 0.02, shadowOffset: { width: 0, height: 4 }, shadowRadius: 10 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#0F172A', marginBottom: 12 }}>Summary</Text>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <Text style={{ fontSize: 13, color: '#64748B' }}>Total Items</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: '#0F172A' }}>{items.reduce((sum, item) => sum + (item.quantity || 0), 0)}</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <Text style={{ fontSize: 13, color: '#64748B' }}>Subtotal</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: '#0F172A' }}>₨ {subtotal.toLocaleString()}</Text>
+                  </View>
+                  {itemsDiscount > 0 && (
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <Text style={{ fontSize: 13, color: '#64748B' }}>Items Discount</Text>
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: '#EF4444' }}>-₨ {itemsDiscount.toLocaleString()}</Text>
+                    </View>
+                  )}
+                  {campaignDiscount > 0 && (
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <Text style={{ fontSize: 13, color: '#64748B' }}>Campaign Discount ({campaignDiscountPercent}%)</Text>
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: '#16A34A' }}>-₨ {campaignDiscount.toLocaleString()}</Text>
+                    </View>
+                  )}
+                  {orderType === 'Online Delivery' && (
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <Text style={{ fontSize: 13, color: '#64748B' }}>Delivery Fee</Text>
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: '#B45309' }}>₨ {deliveryFee}</Text>
+                    </View>
+                  )}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E2E8F0' }}>
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: '#0F172A' }}>Total Amount</Text>
+                    <Text style={{ fontSize: 17, fontWeight: '900', color: '#2563EB' }}>₨ {totalAmount.toLocaleString()}</Text>
+                  </View>
+                </View>
+              );
+            })()}
+
             <TouchableOpacity
               onPress={handleSave}
               disabled={saving}
@@ -308,6 +437,13 @@ const SalesFormModal = ({
           }
           setProductModalVisible(false);
         }}
+      />
+      
+      <CalendarModal
+        visible={calendarVisible}
+        onClose={() => setCalendarVisible(false)}
+        value={date}
+        onSelect={setDate}
       />
     </Modal>
   );
@@ -484,3 +620,118 @@ export const SalesScreen = () => {
     </ScreenWrapper>
   );
 };
+
+// ─── Custom Premium Calendar Modal ───────────────────────────────────────────
+
+const CalendarModal = ({
+  visible, onClose, value, onSelect
+}: {
+  visible: boolean; onClose: () => void; value: string; onSelect: (d: string) => void;
+}) => {
+  const [currentDate, setCurrentDate] = useState(new Date(value || new Date()));
+
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+
+  // Days in selected month
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  // Index of the 1st day (0 = Sun, 1 = Mon, etc.)
+  const firstDayIndex = new Date(year, month, 1).getDay();
+  // Shift Sunday (0) to index 6, Monday (1) to index 0
+  const startOffset = firstDayIndex === 0 ? 6 : firstDayIndex - 1;
+
+  const days = [];
+  // Fill offset slots
+  for (let i = 0; i < startOffset; i++) {
+    days.push(null);
+  }
+  // Fill actual day numbers
+  for (let i = 1; i <= daysInMonth; i++) {
+    days.push(i);
+  }
+
+  const handlePrevMonth = () => {
+    setCurrentDate(new Date(year, month - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentDate(new Date(year, month + 1, 1));
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(15,23,42,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <View style={{
+          backgroundColor: '#FFFFFF', borderRadius: 24, padding: 20, width: '100%', maxWidth: 340,
+          shadowColor: '#0F172A', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.15, shadowRadius: 30, elevation: 10
+        }}>
+          {/* Calendar Header */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <TouchableOpacity onPress={handlePrevMonth} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 18, fontWeight: '700', color: '#475569' }}>‹</Text>
+            </TouchableOpacity>
+            <Text style={{ fontSize: 16, fontWeight: '800', color: '#0F172A' }}>{monthNames[month]} {year}</Text>
+            <TouchableOpacity onPress={handleNextMonth} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 18, fontWeight: '700', color: '#475569' }}>›</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Weekday Labels */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+            {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map(day => (
+              <View key={day} style={{ width: 36, alignItems: 'center' }}>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8' }}>{day}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Day Grid */}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start', rowGap: 8, columnGap: 6 }}>
+            {days.map((day, idx) => {
+              if (day === null) {
+                return <View key={`empty-${idx}`} style={{ width: 36, height: 36 }} />;
+              }
+
+              const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+              const isSelected = value === dateString;
+
+              return (
+                <TouchableOpacity
+                  key={`day-${day}`}
+                  onPress={() => {
+                    onSelect(dateString);
+                    onClose();
+                  }}
+                  activeOpacity={0.7}
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 18,
+                    backgroundColor: isSelected ? '#2563EB' : '#FFFFFF',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text style={{ fontSize: 13, fontWeight: isSelected ? '700' : '600', color: isSelected ? '#FFFFFF' : '#334155' }}>
+                    {day}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Cancel Action */}
+          <TouchableOpacity onPress={onClose} style={{ marginTop: 20, backgroundColor: '#F1F5F9', borderRadius: 12, paddingVertical: 12, alignItems: 'center' }}>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: '#64748B' }}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+

@@ -10,7 +10,7 @@ import {
   ChevronDown,
 } from 'lucide-react-native';
 import { ScreenWrapper } from '../components/layout/ScreenWrapper';
-import { dashboardApi } from '../api/endpoints';
+import { dashboardApi, workflowsApi } from '../api/endpoints';
 import { LineChart, BarChart } from 'react-native-gifted-charts';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -74,6 +74,7 @@ const YEARS = [2026, 2025, 2024];
 const MonthlySalesSection = () => {
   const [year, setYear] = useState(2026);
   const [showYearPicker, setShowYearPicker] = useState(false);
+  const [selectedBar, setSelectedBar] = useState<{ month: string; revenue: number } | null>(null);
 
   const { data, isLoading } = useQuery<{ data: MonthlySalesPoint[] }>({
     queryKey: ['monthly-sales', year],
@@ -83,8 +84,9 @@ const MonthlySalesSection = () => {
   const chartData = (data?.data || []).map(d => ({
     value: d.revenue / 1000,  // show in thousands
     label: d.month,
-    frontColor: '#2563EB',
+    frontColor: selectedBar?.month === d.month ? '#1D4ED8' : '#2563EB',
     topLabelComponent: () => null,
+    onPress: () => setSelectedBar({ month: d.month, revenue: d.revenue }),
   }));
 
   const hasData = chartData.some(d => d.value > 0);
@@ -111,11 +113,30 @@ const MonthlySalesSection = () => {
       {showYearPicker && (
         <View className="absolute right-0 top-10 z-10 rounded-xl overflow-hidden" style={{ backgroundColor: '#FFF', borderWidth: 1, borderColor: '#E2E8F0', elevation: 8, shadowOpacity: 0.1, shadowRadius: 8 }}>
           {YEARS.map(y => (
-            <TouchableOpacity key={y} onPress={() => { setYear(y); setShowYearPicker(false); }}
+            <TouchableOpacity key={y} onPress={() => { setYear(y); setShowYearPicker(false); setSelectedBar(null); }}
               className="px-5 py-3" style={{ backgroundColor: y === year ? '#EFF6FF' : '#FFF' }}>
               <Text style={{ color: y === year ? '#2563EB' : '#0F172A', fontWeight: y === year ? '700' : '400' }}>{y}</Text>
             </TouchableOpacity>
           ))}
+        </View>
+      )}
+
+      {/* Dynamic Selected Bar Tooltip */}
+      {selectedBar && (
+        <View style={{
+          backgroundColor: '#1E293B',
+          paddingHorizontal: 14,
+          paddingVertical: 10,
+          borderRadius: 12,
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 10,
+          borderWidth: 1,
+          borderColor: '#334155'
+        }}>
+          <Text style={{ color: '#94A3B8', fontSize: 12, fontWeight: '600' }}>{selectedBar.month} Sales Performance</Text>
+          <Text style={{ color: '#FFF', fontSize: 14, fontWeight: '800' }}>₨ {selectedBar.revenue.toLocaleString()}</Text>
         </View>
       )}
 
@@ -136,8 +157,6 @@ const MonthlySalesSection = () => {
             noOfSections={4}
             barBorderRadius={4}
             frontColor="#2563EB"
-            gradientColor="#93C5FD"
-            showGradient
             height={180}
             yAxisThickness={0}
             xAxisThickness={1}
@@ -177,31 +196,42 @@ const LowStockSection = () => {
         <Text style={{ fontSize: 16, fontWeight: '700', color: '#0F172A' }}>⚠ Low Stock Alerts</Text>
         <Text style={{ fontSize: 12, color: '#EA580C', fontWeight: '600' }}>{items.length} items</Text>
       </View>
-      <View className="rounded-2xl overflow-hidden" style={{ borderWidth: 1, borderColor: '#FED7AA' }}>
+      <View className="rounded-2xl overflow-hidden" style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#FED7AA' }}>
         {isLoading ? (
-          <View className="p-5 items-center"><ActivityIndicator color="#EA580C" /></View>
+          <View className="p-8 items-center"><ActivityIndicator color="#EA580C" /></View>
         ) : items.length === 0 ? (
           <View style={{ backgroundColor: '#FFF7ED' }}>
             <NoDataView message="All stock levels are healthy" />
           </View>
         ) : (
-          items.map((item, index) => (
-            <View key={`${item.product_id}-${item.city}`}
-              className="flex-row items-center px-4 py-3"
-              style={{ backgroundColor: index % 2 === 0 ? '#FFF7ED' : '#FFFFFF', borderBottomWidth: index < items.length - 1 ? 1 : 0, borderBottomColor: '#FED7AA' }}>
-              <View className="w-8 h-8 rounded-full items-center justify-center mr-3" style={{ backgroundColor: '#FEE0C0' }}>
-                <AlertTriangle size={14} color="#EA580C" />
-              </View>
-              <View className="flex-1">
-                <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }} numberOfLines={1}>{item.product_name}</Text>
-                <Text style={{ fontSize: 11, color: '#94A3B8' }}>{item.city} · {item.sku}</Text>
-              </View>
-              <View className="items-end">
-                <Text style={{ fontSize: 16, fontWeight: '800', color: '#EA580C' }}>{item.quantity}</Text>
-                <Text style={{ fontSize: 10, color: '#94A3B8' }}>/ {item.threshold} min</Text>
-              </View>
+          <View>
+            {/* Table Header */}
+            <View style={{ flexDirection: 'row', backgroundColor: '#FFF7ED', paddingVertical: 10, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#FED7AA' }}>
+              <Text style={{ flex: 2, fontSize: 11, fontWeight: '700', color: '#B45309', textTransform: 'uppercase' }}>Product</Text>
+              <Text style={{ flex: 1, fontSize: 11, fontWeight: '700', color: '#B45309', textTransform: 'uppercase', textAlign: 'center' }}>City</Text>
+              <Text style={{ flex: 1, fontSize: 11, fontWeight: '700', color: '#B45309', textTransform: 'uppercase', textAlign: 'right' }}>Stock</Text>
             </View>
-          ))
+            {/* Table Rows */}
+            {items.map((item, idx) => (
+              <View key={`${item.product_id}-${item.city}`}
+                style={{
+                  flexDirection: 'row', paddingVertical: 12, paddingHorizontal: 16,
+                  backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#FFFDFB',
+                  borderBottomWidth: idx < items.length - 1 ? 1 : 0, borderBottomColor: '#FFE0C0',
+                  alignItems: 'center'
+                }}>
+                <View style={{ flex: 2 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }} numberOfLines={1}>{item.product_name}</Text>
+                  <Text style={{ fontSize: 10, color: '#94A3B8', marginTop: 2 }}>{item.sku}</Text>
+                </View>
+                <Text style={{ flex: 1, fontSize: 12, fontWeight: '600', color: '#475569', textAlign: 'center' }}>{item.city}</Text>
+                <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: '#EA580C' }}>{item.quantity}</Text>
+                  <Text style={{ fontSize: 9, color: '#94A3B8', marginTop: 1 }}>min: {item.threshold}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
         )}
       </View>
     </View>
@@ -217,7 +247,6 @@ const HighDemandSection = () => {
   });
 
   const items = data?.items || [];
-  const maxSold = Math.max(...items.map(i => i.total_sold), 1);
 
   return (
     <View className="mx-5 mb-6">
@@ -228,32 +257,38 @@ const HighDemandSection = () => {
           <Text style={{ fontSize: 12, color: '#EA580C', fontWeight: '600', marginLeft: 3 }}>Top {items.length}</Text>
         </View>
       </View>
-      <View className="rounded-2xl overflow-hidden" style={{ backgroundColor: '#FFF', borderWidth: 1, borderColor: '#E2E8F0' }}>
+      <View className="rounded-2xl overflow-hidden" style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0' }}>
         {isLoading ? (
-          <View className="p-5 items-center"><ActivityIndicator color="#2563EB" /></View>
+          <View className="p-8 items-center"><ActivityIndicator color="#2563EB" /></View>
         ) : items.length === 0 ? (
           <NoDataView message="No sales recorded yet" />
         ) : (
-          items.map((item, index) => {
-            const pct = item.total_sold / maxSold;
-            return (
-              <View key={item.product_id} className="px-4 py-3"
-                style={{ borderBottomWidth: index < items.length - 1 ? 1 : 0, borderBottomColor: '#F1F5F9' }}>
-                <View className="flex-row items-center mb-1.5">
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#64748B', width: 20 }}>#{index + 1}</Text>
-                  <Text style={{ flex: 1, fontSize: 13, fontWeight: '700', color: '#0F172A' }} numberOfLines={1}>{item.product_name}</Text>
-                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#2563EB' }}>{item.total_sold} sold</Text>
+          <View>
+            {/* Table Header */}
+            <View style={{ flexDirection: 'row', backgroundColor: '#F8FAFC', paddingVertical: 10, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
+              <Text style={{ flex: 0.5, fontSize: 11, fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Rank</Text>
+              <Text style={{ flex: 2, fontSize: 11, fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Product</Text>
+              <Text style={{ flex: 1, fontSize: 11, fontWeight: '700', color: '#64748B', textTransform: 'uppercase', textAlign: 'center' }}>Sold</Text>
+              <Text style={{ flex: 1.5, fontSize: 11, fontWeight: '700', color: '#64748B', textTransform: 'uppercase', textAlign: 'right' }}>Revenue</Text>
+            </View>
+            {/* Table Rows */}
+            {items.map((item, idx) => (
+              <View key={item.product_id}
+                style={{
+                  flexDirection: 'row', paddingVertical: 12, paddingHorizontal: 16,
+                  borderBottomWidth: idx < items.length - 1 ? 1 : 0, borderBottomColor: '#F1F5F9',
+                  alignItems: 'center'
+                }}>
+                <Text style={{ flex: 0.5, fontSize: 13, fontWeight: '800', color: idx === 0 ? '#EF4444' : idx === 1 ? '#F97316' : '#2563EB' }}>#{idx + 1}</Text>
+                <View style={{ flex: 2 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }} numberOfLines={1}>{item.product_name}</Text>
+                  <Text style={{ fontSize: 10, color: '#94A3B8', marginTop: 2 }}>{item.category}</Text>
                 </View>
-                {/* Demand bar */}
-                <View style={{ height: 4, backgroundColor: '#E2E8F0', borderRadius: 4, marginLeft: 20 }}>
-                  <View style={{ width: `${pct * 100}%`, height: 4, backgroundColor: index === 0 ? '#EF4444' : index === 1 ? '#F97316' : '#2563EB', borderRadius: 4 }} />
-                </View>
-                <Text style={{ fontSize: 10, color: '#94A3B8', marginTop: 2, marginLeft: 20 }}>
-                  ₨ {item.total_revenue.toLocaleString()} revenue · {item.category}
-                </Text>
+                <Text style={{ flex: 1, fontSize: 13, fontWeight: '800', color: '#2563EB', textAlign: 'center' }}>{item.total_sold}</Text>
+                <Text style={{ flex: 1.5, fontSize: 13, fontWeight: '800', color: '#0F172A', textAlign: 'right' }}>₨ {item.total_revenue.toLocaleString()}</Text>
               </View>
-            );
-          })
+            ))}
+          </View>
         )}
       </View>
     </View>
@@ -268,44 +303,126 @@ const ACTION_STATUS_CONFIG: Record<string, { color: string; bg: string; icon: Re
   insight: { color: '#2563EB', bg: '#DBEAFE', icon: <Zap size={14} color="#2563EB" /> },
 };
 
-const RECENT_AI_ACTIONS = [
-  { id: 1, time: '2 min ago', type: 'Campaign Created', description: 'Launched "Karachi Summer Surge" at 18% discount targeting high-abandon carts.', status: 'executed', impact: '+₨ 82,000 projected' },
-  { id: 2, time: '47 min ago', type: 'Price Adjustment', description: 'Reduced price on SKU-2041 by 12% in Lahore after 3-day low velocity analysis.', status: 'executed', impact: '+23% velocity' },
-  { id: 3, time: '2 hrs ago', type: 'Inventory Alert', description: 'Reorder triggered for Galaxy A15 — Islamabad stock below threshold (4 units).', status: 'pending', impact: 'Awaiting approval' },
-];
+const RecentAIActionsSection = () => {
+  const { data: workflows = [], isLoading } = useQuery<any[]>({
+    queryKey: ['workflows'],
+    queryFn: workflowsApi.getAll,
+  });
 
-const RecentAIActionsSection = () => (
-  <View className="px-5 pb-8">
-    <View className="flex-row justify-between items-center mb-4">
-      <Text style={{ fontSize: 16, fontWeight: '700', color: '#0F172A' }}>Recent AI Actions</Text>
-      <TouchableOpacity className="flex-row items-center">
-        <Text style={{ fontSize: 12, fontWeight: '600', color: '#2563EB', marginRight: 2 }}>View All</Text>
-        <ChevronRight size={14} color="#2563EB" />
-      </TouchableOpacity>
+  const displayList = workflows.slice(0, 3); // show top 3
+
+  return (
+    <View className="px-5 pb-8">
+      <View className="flex-row justify-between items-center mb-4">
+        <Text style={{ fontSize: 16, fontWeight: '700', color: '#0F172A' }}>Recent AI Actions</Text>
+      </View>
+      {isLoading ? (
+        <ActivityIndicator color="#2563EB" style={{ marginVertical: 12 }} />
+      ) : displayList.length === 0 ? (
+        <Text style={{ fontSize: 13, color: '#94A3B8', textAlign: 'center', marginVertical: 12 }}>No recent actions taken by AI.</Text>
+      ) : (
+        displayList.map((item, index) => {
+          const statusMapped = item.status === 'completed' ? 'executed' : item.status === 'pending' ? 'pending' : 'insight';
+          const s = ACTION_STATUS_CONFIG[statusMapped] || ACTION_STATUS_CONFIG.insight;
+          const timeFormatted = item.created_at ? new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now';
+
+          return (
+            <View key={item.id || index} className="flex-row">
+              <View className="items-center mr-3" style={{ width: 32 }}>
+                <View className="w-8 h-8 rounded-full items-center justify-center" style={{ backgroundColor: s.bg }}>{s.icon}</View>
+                {index < displayList.length - 1 && <View style={{ flex: 1, width: 1, backgroundColor: '#E2E8F0', marginVertical: 4 }} />}
+              </View>
+              <View className="flex-1 pb-5">
+                <View className="flex-row justify-between items-center mb-1">
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }}>{item.name}</Text>
+                  <Text style={{ fontSize: 11, color: '#94A3B8' }}>{timeFormatted}</Text>
+                </View>
+                <Text style={{ fontSize: 12, lineHeight: 17, color: '#475569', marginBottom: 6 }}>{item.description}</Text>
+                {item.projected_impact && (
+                  <View className="self-start px-2 py-0.5 rounded-full" style={{ backgroundColor: s.bg }}>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: s.color }}>{item.projected_impact}</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          );
+        })
+      )}
     </View>
-    {RECENT_AI_ACTIONS.map((item, index) => {
-      const s = ACTION_STATUS_CONFIG[item.status] || ACTION_STATUS_CONFIG.insight;
-      return (
-        <View key={item.id} className="flex-row">
-          <View className="items-center mr-3" style={{ width: 32 }}>
-            <View className="w-8 h-8 rounded-full items-center justify-center" style={{ backgroundColor: s.bg }}>{s.icon}</View>
-            {index < RECENT_AI_ACTIONS.length - 1 && <View style={{ flex: 1, width: 1, backgroundColor: '#E2E8F0', marginVertical: 4 }} />}
-          </View>
-          <View className="flex-1 pb-5">
-            <View className="flex-row justify-between items-center mb-1">
-              <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }}>{item.type}</Text>
-              <Text style={{ fontSize: 11, color: '#94A3B8' }}>{item.time}</Text>
-            </View>
-            <Text style={{ fontSize: 12, lineHeight: 17, color: '#475569', marginBottom: 6 }}>{item.description}</Text>
-            <View className="self-start px-2 py-0.5 rounded-full" style={{ backgroundColor: s.bg }}>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: s.color }}>{item.impact}</Text>
-            </View>
-          </View>
-        </View>
-      );
-    })}
-  </View>
-);
+  );
+};
+
+// ─── Weekly Sales Section ────────────────────────────────────────────────────
+
+const WeeklySalesSection = () => {
+  const { data, isLoading } = useQuery<{ points: { date: string; revenue: number; orders: number }[] }>({
+    queryKey: ['weekly-sales'],
+    queryFn: dashboardApi.getWeeklySales,
+  });
+
+  const points = data?.points || [];
+
+  const chartData = points.map(p => ({
+    value: p.revenue / 1000, // display in thousands
+    label: new Date(p.date).toLocaleDateString([], { weekday: 'short' }),
+  }));
+
+  const hasData = chartData.some(d => d.value > 0);
+
+  return (
+    <View className="mx-5 mb-6">
+      <View>
+        <Text style={{ fontSize: 16, fontWeight: '700', color: '#0F172A' }}>Weekly Sales</Text>
+        <Text style={{ fontSize: 12, color: '#94A3B8', marginTop: 1, marginBottom: 12 }}>Revenue trend over the last 7 days (PKR Thousands)</Text>
+      </View>
+      <View className="rounded-2xl p-4" style={{ backgroundColor: '#FFF', borderWidth: 1, borderColor: '#E2E8F0' }}>
+        {isLoading ? (
+          <View className="items-center py-8"><ActivityIndicator color="#16A34A" /></View>
+        ) : !hasData ? (
+          <NoDataView message="No sales data recorded this week" />
+        ) : (
+          <LineChart
+            data={chartData}
+            color="#16A34A"
+            thickness={3}
+            noOfSections={4}
+            hideRules
+            xAxisLabelTextStyle={{ fontSize: 9, color: '#94A3B8' }}
+            yAxisTextStyle={{ fontSize: 9, color: '#94A3B8' }}
+            height={160}
+            yAxisThickness={0}
+            xAxisThickness={1}
+            xAxisColor="#E2E8F0"
+            pointerConfig={{
+              pointerStripColor: '#16A34A',
+              pointerStripWidth: 1.5,
+              pointerColor: '#16A34A',
+              radius: 5,
+              pointerLabelComponent: (items: any) => {
+                if (!items || items.length === 0) return null;
+                return (
+                  <View style={{
+                    backgroundColor: '#1E293B',
+                    paddingHorizontal: 8,
+                    paddingVertical: 4,
+                    borderRadius: 6,
+                    position: 'absolute',
+                    bottom: 20,
+                    left: -40,
+                    width: 90,
+                    alignItems: 'center',
+                  }}>
+                    <Text style={{ color: '#FFF', fontSize: 10, fontWeight: '700' }}>₨ {Math.round(items[0].value * 1000).toLocaleString()}</Text>
+                  </View>
+                );
+              }
+            }}
+          />
+        )}
+      </View>
+    </View>
+  );
+};
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
@@ -337,15 +454,18 @@ export const DashboardScreen = () => {
         {isLoading ? <MetricsSkeleton /> : (
           <View className="px-5 mb-6">
             <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
-              <KpiCard label="Total Revenue" value={fmt(metrics?.total_revenue ?? 0)} isUp change="+14%" colorKey="revenue" icon={<TrendingUp size={18} color={KPI_COLORS.revenue.icon} />} />
-              <KpiCard label="Total Orders" value={(metrics?.orders_today ?? 0).toLocaleString()} isUp change="+8%" colorKey="orders" icon={<CheckCircle2 size={18} color={KPI_COLORS.orders.icon} />} />
+              <KpiCard label="Total Revenue" value={fmt(metrics?.total_revenue ?? 0)} colorKey="revenue" icon={<TrendingUp size={18} color={KPI_COLORS.revenue.icon} />} />
+              <KpiCard label="Total Orders" value={(metrics?.orders_today ?? 0).toLocaleString()} colorKey="orders" icon={<CheckCircle2 size={18} color={KPI_COLORS.orders.icon} />} />
             </View>
             <View style={{ flexDirection: 'row', gap: 12 }}>
               <KpiCard label="Campaigns" value={`${metrics?.active_campaigns ?? 0} Active`} colorKey="campaigns" icon={<Megaphone size={18} color={KPI_COLORS.campaigns.icon} />} />
-              <KpiCard label="Low Stock" value={`${metrics?.low_stock_alerts ?? 0} SKUs`} isUp={false} change="High" colorKey="alerts" icon={<AlertTriangle size={18} color={KPI_COLORS.alerts.icon} />} />
+              <KpiCard label="Low Stock" value={`${metrics?.low_stock_alerts ?? 0} SKUs`} colorKey="alerts" icon={<AlertTriangle size={18} color={KPI_COLORS.alerts.icon} />} />
             </View>
           </View>
         )}
+
+        {/* Weekly Sales Chart */}
+        <WeeklySalesSection />
 
         {/* Monthly Sales Chart */}
         <MonthlySalesSection />

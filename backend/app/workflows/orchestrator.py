@@ -15,7 +15,7 @@ from app.tools.analytics import get_regional_sales_summary, get_low_stock_summar
 # It's recommended to initialize the client explicitly or let it pick up GEMINI_API_KEY from environment
 client = genai.Client()
 
-async def run_ai_pipeline(workflow_id: str, user_input: str):
+async def run_ai_pipeline(workflow_id: str, combined_input: str, category: str = None):
     str_id = str(workflow_id)
     
     # We use next(get_db()) to get the firestore client
@@ -27,17 +27,20 @@ async def run_ai_pipeline(workflow_id: str, user_input: str):
         return
             
     try:
-        await sse_manager.emit(str_id, "Parsing input...")
+        await sse_manager.emit(str_id, "Parsing report...")
         # 1. Intake
-        classification = analyze_input(client, user_input)
+        classification = analyze_input(client, combined_input, category)
         
-        await sse_manager.emit(str_id, "Analyzing sales and inventory data...")
+        await sse_manager.emit(str_id, "Understanding business context...")
+        await sse_manager.emit(str_id, "Detecting anomalies...")
         # 2. Insight
         sales_data = get_regional_sales_summary(db)
         inventory_data = get_low_stock_summary(db)
-        insight = generate_insights(client, classification, sales_data, inventory_data)
         
-        await sse_manager.emit(str_id, "Formulating action plan...")
+        await sse_manager.emit(str_id, "Generating insights...")
+        insight = generate_insights(client, classification, sales_data, inventory_data, combined_input)
+        
+        await sse_manager.emit(str_id, "Creating recommendations...")
         # 3. Decision
         decision = make_decision(client, insight)
         
@@ -47,7 +50,7 @@ async def run_ai_pipeline(workflow_id: str, user_input: str):
             "status": WorkflowStatus.PENDING_APPROVAL.value
         })
         
-        await sse_manager.emit(str_id, "Awaiting approval")
+        await sse_manager.emit(str_id, "Waiting for approval...")
         await sse_manager.emit(str_id, "Workflow paused")
         
     except Exception as e:
@@ -69,7 +72,7 @@ async def run_execution(workflow_id: str):
         return
         
     try:
-        await sse_manager.emit(str_id, "Execution started...")
+        await sse_manager.emit(str_id, "Executing actions...")
         
         # Re-construct DecisionAction from JSON
         from app.schemas.agents import DecisionAction
@@ -86,7 +89,6 @@ async def run_execution(workflow_id: str):
             }
         })
         
-        await sse_manager.emit(str_id, f"Action completed: {result_msg}")
         await sse_manager.emit(str_id, "Workflow completed")
         
     except Exception as e:

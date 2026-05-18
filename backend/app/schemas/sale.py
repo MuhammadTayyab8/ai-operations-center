@@ -4,7 +4,7 @@ from datetime import datetime
 from app.schemas.enums import OrderType
 
 class SaleItemCreate(BaseModel):
-    product_id: int
+    product_id: Union[int, str]
     quantity: int
     unit_price: float
 
@@ -14,6 +14,10 @@ class SaleCreate(BaseModel):
     discount_applied: float = 0.0
     city: str
     items: List[SaleItemCreate]
+    customer_name: Optional[str] = None
+    delivery_address: Optional[str] = None
+    customer_phone: Optional[str] = None
+    customer_email: Optional[str] = None
 
 class SaleItemResponse(SaleItemCreate):
     id: Union[int, str]
@@ -29,4 +33,9 @@ class SaleResponse(BaseModel):
     city: str
     created_at: datetime
     items: List[SaleItemResponse]
+    customer_name: Optional[str] = None
+    delivery_address: Optional[str] = None
+    customer_phone: Optional[str] = None
+    customer_email: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
+

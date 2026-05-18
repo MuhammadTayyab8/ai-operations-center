@@ -1,54 +1,58 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { MotiView } from 'moti';
-import { CheckCircle2, CircleDashed } from 'lucide-react-native';
-import { useAIWorkflowStore, AgentStep } from '../../store/aiWorkflowStore';
-
-const STEPS = [
-  { id: 'intake', label: 'Intake Agent' },
-  { id: 'insight', label: 'Insight Agent' },
-  { id: 'decision', label: 'Decision Agent' },
-  { id: 'execution', label: 'Execution Agent' },
-];
+import { CheckCircle2, CircleDashed, FileSearch, Target, BrainCircuit, Activity, Zap } from 'lucide-react-native';
+import { useAIWorkflowStore } from '../../store/aiWorkflowStore';
 
 export const WorkflowTimeline = () => {
-  const currentStep = useAIWorkflowStore(state => state.currentStep);
+  const timelineSteps = useAIWorkflowStore(state => state.timelineSteps);
 
-  const getCurrentIndex = () => STEPS.findIndex(s => s.id === currentStep);
-  const currentIndex = getCurrentIndex();
+  const getIconForStep = (label: string, status: string) => {
+    if (status === 'completed') return <CheckCircle2 size={24} color="#16A34A" />;
+    if (status === 'active') return <CircleDashed size={24} color="#2563EB" />;
+    
+    // Pending icons based on label keyword
+    if (label.includes('report')) return <FileSearch size={16} color="#94A3B8" />;
+    if (label.includes('business')) return <Target size={16} color="#94A3B8" />;
+    if (label.includes('anomalies')) return <Activity size={16} color="#94A3B8" />;
+    if (label.includes('insights')) return <BrainCircuit size={16} color="#94A3B8" />;
+    return <Zap size={16} color="#94A3B8" />;
+  };
 
   return (
-    <View className="p-5 rounded-2xl bg-white" style={{ borderWidth: 1, borderColor: '#E2E8F0' }}>
-      <Text style={{ fontSize: 16, fontWeight: '700', color: '#0F172A', marginBottom: 16 }}>AI Workflow Progress</Text>
+    <View className="p-5 rounded-2xl bg-white" style={{ borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 16 }}>
+      <Text style={{ fontSize: 16, fontWeight: '700', color: '#0F172A', marginBottom: 20 }}>Live Workflow</Text>
       <View>
-        {STEPS.map((step, index) => {
-          const isCompleted = index < currentIndex || (index === 3 && currentStep === 'execution' && !useAIWorkflowStore.getState().isProcessing);
-          const isActive = index === currentIndex;
+        {timelineSteps.map((step, index) => {
+          const isCompleted = step.status === 'completed';
+          const isActive = step.status === 'active';
+          const isPending = step.status === 'pending';
+
+          // For the timeline line height
+          const showLine = index < timelineSteps.length - 1;
+          const lineColor = isCompleted ? '#16A34A' : '#E2E8F0';
 
           return (
-            <View key={step.id} className="flex-row items-start">
+            <View key={index} className="flex-row items-start">
               {/* Timeline dot & line */}
               <View className="items-center mr-4" style={{ width: 24 }}>
                 <MotiView
                   animate={{
                     scale: isActive ? [1, 1.2, 1] : 1,
+                    opacity: isPending ? 0.6 : 1,
                   }}
                   transition={{
                     type: 'timing',
                     duration: 1500,
                     loop: isActive,
                   }}
+                  className="items-center justify-center bg-white"
+                  style={{ width: 24, height: 24, zIndex: 10 }}
                 >
-                  {isCompleted ? (
-                    <CheckCircle2 size={24} color="#16A34A" />
-                  ) : isActive ? (
-                    <CircleDashed size={24} color="#2563EB" />
-                  ) : (
-                    <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: '#E2E8F0', marginTop: 4 }} />
-                  )}
+                  {getIconForStep(step.label, step.status)}
                 </MotiView>
-                {index < STEPS.length - 1 && (
-                  <View style={{ width: 2, height: 32, backgroundColor: isCompleted ? '#16A34A' : '#E2E8F0', marginVertical: 4 }} />
+                {showLine && (
+                  <View style={{ width: 2, height: 28, backgroundColor: lineColor, marginVertical: 2 }} />
                 )}
               </View>
 
@@ -56,16 +60,13 @@ export const WorkflowTimeline = () => {
               <View className="justify-center" style={{ height: 24 }}>
                 <Text
                   style={{
-                    fontSize: 15,
-                    fontWeight: isActive || isCompleted ? '700' : '500',
-                    color: isActive ? '#2563EB' : isCompleted ? '#0F172A' : '#94A3B8',
+                    fontSize: 14,
+                    fontWeight: isActive || isCompleted ? '600' : '500',
+                    color: isActive ? '#2563EB' : isCompleted ? '#334155' : '#94A3B8',
                   }}
                 >
                   {step.label}
                 </Text>
-                {isActive && (
-                  <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>Processing...</Text>
-                )}
               </View>
             </View>
           );

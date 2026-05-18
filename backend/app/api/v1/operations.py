@@ -1,21 +1,45 @@
-from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException
+from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException, UploadFile, File, Form
 from google.cloud import firestore
 from datetime import datetime
+import asyncio
 
+from typing import List
 from app.db.database import get_db
 from app.schemas.enums import WorkflowStatus
-from app.schemas.operations import WorkflowTriggerRequest, WorkflowApproveRequest, WorkflowStatusResponse
+from app.schemas.operations import WorkflowApproveRequest, WorkflowStatusResponse
 from app.workflows.orchestrator import run_ai_pipeline, run_execution
 from app.streaming.sse_manager import sse_manager
+from app.utils.file_parser import extract_file_content
 
 router = APIRouter(prefix="/workflows", tags=["Operations Center"])
 
 @router.post("/trigger")
-def trigger_workflow(request: WorkflowTriggerRequest, background_tasks: BackgroundTasks, db: firestore.Client = Depends(get_db)):
+async def trigger_workflow(
+    background_tasks: BackgroundTasks,
+    db: firestore.Client = Depends(get_db),
+    user_input: str = Form(None),
+    category: str = Form(None),
+    file: UploadFile = File(None)
+):
     doc_ref = db.collection("workflows").document()
     
+    # Process file if provided
+    extracted_text = ""
+    if file:
+        file_bytes = await file.read()
+        extracted_text = extract_file_content(file.filename, file.content_type, file_bytes)
+        if "IMAGE_UPLOADED" in extracted_text:
+            # For simplicity, pass the bytes or handle image parsing separately inside pipeline
+            pass
+            
+    # Combine context
+    combined_input = f"Category: {category}\n" if category else ""
+    if user_input: combined_input += f"User Note: {user_input}\n"
+    if extracted_text: combined_input += f"Extracted File Content: {extracted_text}\n"
+    
     workflow_data = {
-        "trigger_source": request.user_input,
+        "trigger_source": combined_input,
+        "category": category,
         "status": WorkflowStatus.PROCESSING.value,
         "context_data": None,
         "created_at": datetime.utcnow().isoformat(),
@@ -25,7 +49,7 @@ def trigger_workflow(request: WorkflowTriggerRequest, background_tasks: Backgrou
     doc_ref.set(workflow_data)
     
     # Start the orchestrator in the background
-    background_tasks.add_task(run_ai_pipeline, doc_ref.id, request.user_input)
+    background_tasks.add_task(run_ai_pipeline, doc_ref.id, combined_input, category)
     
     return {"message": "Workflow started", "workflow_id": doc_ref.id}
 
@@ -72,3 +96,18 @@ def approve_workflow(workflow_id: str, request: WorkflowApproveRequest, backgrou
 
 async def emit_rejection(workflow_id: str):
     await sse_manager.emit(str(workflow_id), "Workflow failed") # Closes stream
+
+@router.get("/", response_model=List[dict])
+def get_workflows(db: firestore.Client = Depends(get_db)):
+    workflows_ref = db.collection("workflows")
+    # Stream recent workflows ordered by created_at desc
+    docs = workflows_ref.order_by("created_at", direction=firestore.Query.DESCENDING).limit(20).stream()
+    
+    workflows = []
+    for doc in docs:
+        w_data = doc.to_dict()
+        w_data["id"] = doc.id
+        workflows.append(w_data)
+        
+    return workflows
+

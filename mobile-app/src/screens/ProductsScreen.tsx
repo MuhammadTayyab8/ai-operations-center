@@ -161,7 +161,7 @@ const ProductCard = ({ item, onEdit, onDelete }: { item: Product; onEdit: (p: Pr
           {item.inventory.length === 0 ? (
             <Text style={{ fontSize: 12, color: '#CBD5E1' }}>No inventory records</Text>
           ) : (
-            item.inventory.map(inv => <RegionBar key={inv.id} region={inv.city} count={inv.quantity} max={maxQty} />)
+            item.inventory.map((inv: any, i: number) => <RegionBar key={i} region={inv.city} count={inv.quantity} max={maxQty} />)
           )}
         </View>
       )}
@@ -209,7 +209,7 @@ const ProductFormModal = ({
         category: editProduct.category,
         inventory: DEFAULT_CITIES.map(city => {
           const inv = editProduct.inventory.find(i => i.city === city);
-          return { city, quantity: String(inv?.quantity ?? 0), threshold: String(inv?.threshold ?? 5) };
+          return { city, quantity: String(inv?.quantity ?? 0), threshold: String(inv?.low_stock_threshold ?? 5) };
         }),
       });
     } else {
@@ -448,14 +448,14 @@ export const ProductsScreen = () => {
       </View>
 
       {/* Category filter — dynamic from data */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 6 }} style={{ maxHeight: 46, marginBottom: 4 }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 6 }} style={{ minHeight: 38, marginBottom: 4 }}>
         {categories.map(cat => (
           <FilterPill key={cat} label={cat} active={activeCategory === cat} onPress={() => setActiveCategory(cat)} />
         ))}
       </ScrollView>
 
       {/* Status filter */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 8 }} style={{ maxHeight: 46, marginBottom: 8 }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 8 }} style={{ minHeight: 40, marginBottom: 8 }}>
         {STATUS_FILTERS.map(f => (
           <FilterPill key={f.key} label={f.label} active={activeStatus === f.key} onPress={() => setActiveStatus(f.key)} />
         ))}
