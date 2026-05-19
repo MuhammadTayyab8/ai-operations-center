@@ -63,6 +63,8 @@ def update_product(product_id: str, payload: ProductUpdate, db: firestore.Client
     if payload.sku is not None: update_data["sku"] = payload.sku
     if payload.base_price is not None: update_data["base_price"] = payload.base_price
     if payload.category is not None: update_data["category"] = payload.category
+    if payload.inventory is not None:
+        update_data["inventory"] = [inv.model_dump() for inv in payload.inventory]
 
     if update_data:
         doc_ref.update(update_data)

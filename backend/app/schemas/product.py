@@ -26,6 +26,7 @@ class ProductUpdate(BaseModel):
     sku: Optional[str] = None
     base_price: Optional[float] = None
     category: Optional[str] = None
+    inventory: Optional[List[InventoryBase]] = None
 
 class ProductResponse(ProductBase):
     id: str | int

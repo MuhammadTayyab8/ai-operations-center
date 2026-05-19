@@ -10,7 +10,7 @@ import {
 } from 'lucide-react-native';
 import { ScreenWrapper } from '../components/layout/ScreenWrapper';
 import { salesApi, productsApi, dashboardApi } from '../api/endpoints';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 
 // ─── Constants & Types ────────────────────────────────────────────────────────
@@ -64,6 +64,13 @@ export const ReportsScreen = () => {
     queryFn: dashboardApi.getCRM,
   });
 
+  const { data: deliveryFeeData } = useQuery<any>({
+    queryKey: ['delivery-fee'],
+    queryFn: salesApi.getDeliveryFee,
+  });
+
+  const dbDeliveryFee = deliveryFeeData?.delivery_fee ?? 200;
+
   // ─── Document Export Animation Loop ─────────────────────────────────────────
   const triggerExport = (type: 'PDF' | 'Excel') => {
     setExportType(type);
@@ -85,7 +92,7 @@ export const ReportsScreen = () => {
 
       const saleDateStr = sale.created_at.split('T')[0]; // "YYYY-MM-DD"
       const today = new Date();
-      
+
       const getPastDateStr = (days: number) => {
         const d = new Date(today);
         d.setDate(d.getDate() - days);
@@ -102,6 +109,7 @@ export const ReportsScreen = () => {
     });
   }, [sales, selectedCity, selectedDatePreset]);
 
+  console.log(filteredSales, "filteredSales")
   // ─── Summary Computations ──────────────────────────────────────────────────
   const salesSummary = useMemo(() => {
     let totalRevenue = 0;
@@ -155,7 +163,7 @@ export const ReportsScreen = () => {
         const net = Math.max(0, gross - (s.discount_applied || 0));
         const totalItems = s.items?.reduce((sum, i) => sum + i.quantity, 0) || 0;
         const safeId = (s.id || '').toString().replace(/,/g, '');
-        
+
         rows.push(`${safeId},"${s.type}","${s.city}",${totalItems},${s.discount_applied || 0},${gross},${net},"${s.created_at || 'N/A'}"`);
       });
     } else if (activeReport === 'inventory') {
@@ -205,10 +213,10 @@ export const ReportsScreen = () => {
             <th>Net Amount</th>
           </tr>
           ${filteredSales.map(s => {
-            const gross = s.items?.reduce((sum, i) => sum + (i.unit_price * i.quantity), 0) || 0;
-            const net = Math.max(0, gross - (s.discount_applied || 0));
-            const totalItems = s.items?.reduce((sum, i) => sum + i.quantity, 0) || 0;
-            return `
+        const gross = s.items?.reduce((sum, i) => sum + (i.unit_price * i.quantity), 0) || 0;
+        const net = Math.max(0, gross - (s.discount_applied || 0));
+        const totalItems = s.items?.reduce((sum, i) => sum + i.quantity, 0) || 0;
+        return `
               <tr>
                 <td>${s.id || 'N/A'}</td>
                 <td>${s.type}</td>
@@ -218,7 +226,7 @@ export const ReportsScreen = () => {
                 <td align="right"><strong>PKR ${net.toLocaleString()}</strong></td>
               </tr>
             `;
-          }).join('')}
+      }).join('')}
         </table>
       `;
     } else if (activeReport === 'inventory') {
@@ -241,12 +249,12 @@ export const ReportsScreen = () => {
             <th>Peshawar</th>
           </tr>
           ${products.map(p => {
-            const totalStock = getProductStock(p);
-            const getCityStock = (city: string) => {
-              const inv = p.inventory?.find((i: any) => i.city === city);
-              return inv ? inv.quantity : 0;
-            };
-            return `
+        const totalStock = getProductStock(p);
+        const getCityStock = (city: string) => {
+          const inv = p.inventory?.find((i: any) => i.city === city);
+          return inv ? inv.quantity : 0;
+        };
+        return `
               <tr>
                 <td>${p.id}</td>
                 <td>${p.name}</td>
@@ -259,7 +267,7 @@ export const ReportsScreen = () => {
                 <td align="center">${getCityStock('Peshawar')}</td>
               </tr>
             `;
-          }).join('')}
+      }).join('')}
         </table>
       `;
     } else if (activeReport === 'customers') {
@@ -325,7 +333,7 @@ export const ReportsScreen = () => {
           clearInterval(interval);
           setTimeout(async () => {
             setExporting(false);
-            
+
             try {
               const isPDF = exportType === 'PDF';
               const fileExtension = isPDF ? 'html' : 'csv';
@@ -334,11 +342,11 @@ export const ReportsScreen = () => {
               const fileName = `${activeReport}_report_${Date.now()}.${fileExtension}`;
               const docDirectory = (FileSystem as any).documentDirectory;
               const fileUri = `${docDirectory}${fileName}`;
-              
+
               await FileSystem.writeAsStringAsync(fileUri, fileContent, {
-                encoding: FileSystem.EncodingType.UTF8
+                encoding: FileSystem?.EncodingType?.UTF8
               });
-              
+
               const sharingAvailable = await Sharing.isAvailableAsync();
               if (sharingAvailable) {
                 await Sharing.shareAsync(fileUri, {
@@ -446,7 +454,7 @@ export const ReportsScreen = () => {
               <View style={{ flex: 2 }}>
                 <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }} numberOfLines={1}>{p.name}</Text>
                 <Text style={{ fontSize: 11, color: isLow ? '#EA580C' : '#16A34A', fontWeight: '700', marginTop: 2 }}>
-                  {isLow ? '⚠️ Low Stock Alert' : '✅ Healthy Stock'}
+                  {isLow ? 'Low Stock Alert' : 'Healthy Stock'}
                 </Text>
               </View>
               <Text style={{ flex: 1.2, fontSize: 12, color: '#475569', textAlign: 'center', fontVariant: ['tabular-nums'] }}>{p.sku}</Text>
@@ -517,7 +525,7 @@ export const ReportsScreen = () => {
               </View>
               <Text style={{ fontSize: 11, color: '#0F172A', fontWeight: '600' }}>To: {sale.customer_name || 'N/A'}</Text>
               <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }} numberOfLines={1}>Address: {sale.delivery_address || 'N/A'}</Text>
-              <Text style={{ fontSize: 10, color: '#94A3B8', marginTop: 4 }}>Dispatch Trigger: ₨ 200 fee included</Text>
+              <Text style={{ fontSize: 10, color: '#94A3B8', marginTop: 4 }}>Dispatch Trigger: ₨ {dbDeliveryFee} fee included</Text>
             </View>
           ))}
           {filteredSales.filter(s => s.type === 'Online Delivery').length === 0 && (
@@ -559,7 +567,12 @@ export const ReportsScreen = () => {
         </View>
 
         {/* Report Tab Selectors */}
-        <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 20, marginBottom: 16 }}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}
+          style={{ marginBottom: 16 }}
+        >
           {REPORT_TYPES.map(tab => {
             const isSelected = activeReport === tab.key;
             return (
@@ -567,8 +580,8 @@ export const ReportsScreen = () => {
                 key={tab.key}
                 onPress={() => setActiveReport(tab.key as any)}
                 style={{
-                  flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-                  paddingVertical: 12, borderRadius: 12, borderWidth: 1.5,
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                  paddingVertical: 12, paddingHorizontal: 16, borderRadius: 12, borderWidth: 1.5,
                   backgroundColor: isSelected ? '#EFF6FF' : '#FFFFFF',
                   borderColor: isSelected ? '#2563EB' : '#E2E8F0',
                   gap: 6
@@ -581,7 +594,7 @@ export const ReportsScreen = () => {
               </TouchableOpacity>
             );
           })}
-        </View>
+        </ScrollView>
 
         {/* Filter Toolbar Collapsible Panel */}
         <View style={{ marginHorizontal: 20, padding: 14, backgroundColor: '#F8FAFC', borderRadius: 16, borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 20 }}>

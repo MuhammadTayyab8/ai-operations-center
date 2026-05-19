@@ -57,10 +57,10 @@ const InputField = ({ label, value, onChangeText, placeholder, keyboardType = 'd
 
 const ProductSelectionModal = ({ visible, onClose, onSelect, products }: { visible: boolean, onClose: () => void, onSelect: (p: Product) => void, products: Product[] }) => {
   const [search, setSearch] = useState('');
-  
+
   const filtered = useMemo(() => {
-    return products.filter(p => 
-      p.name.toLowerCase().includes(search.toLowerCase()) || 
+    return products.filter(p =>
+      p.name.toLowerCase().includes(search.toLowerCase()) ||
       p.sku.toLowerCase().includes(search.toLowerCase())
     );
   }, [products, search]);
@@ -69,14 +69,14 @@ const ProductSelectionModal = ({ visible, onClose, onSelect, products }: { visib
     <Modal visible={visible} animationType="slide" transparent>
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
         <View style={{ height: '80%', backgroundColor: '#F8FAFC', borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden' }}>
-          
+
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
             <Text style={{ fontSize: 18, fontWeight: '800', color: '#0F172A' }}>Select Product</Text>
             <TouchableOpacity onPress={onClose} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
               <X size={18} color="#64748B" />
             </TouchableOpacity>
           </View>
-          
+
           <View style={{ padding: 16 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 12, paddingHorizontal: 12, borderWidth: 1, borderColor: '#E2E8F0' }}>
               <Search size={15} color="#94A3B8" />
@@ -127,7 +127,7 @@ const SalesFormModal = ({
   const [items, setItems] = useState<SaleItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [productModalVisible, setProductModalVisible] = useState(false);
-  
+
   // Custom delivery order states
   const [customerName, setCustomerName] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
@@ -199,7 +199,7 @@ const SalesFormModal = ({
       const subtotal = items.reduce((sum, item) => sum + ((item.quantity || 0) * (item.unit_price || 0)), 0);
       const itemsDiscount = items.reduce((sum, item) => sum + (item.discount || 0), 0);
       const campaignDiscount = subtotal * (campaignDiscountPercent / 100);
-      
+
       const payload = {
         type: orderType,
         city: city,
@@ -214,7 +214,7 @@ const SalesFormModal = ({
         customer_phone: orderType === 'Online Delivery' ? customerPhone.trim() : null,
         customer_email: orderType === 'Online Delivery' ? customerEmail.trim() : null,
       };
-      
+
       if (isEdit && editSale) {
         await salesApi.update(editSale.id, payload);
       } else {
@@ -243,7 +243,7 @@ const SalesFormModal = ({
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
-          
+
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 28, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
             <Text style={{ fontSize: 18, fontWeight: '800', color: '#0F172A' }}>{isEdit ? 'Edit Sale' : 'Add Sale'}</Text>
             <TouchableOpacity onPress={onClose} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
@@ -253,7 +253,7 @@ const SalesFormModal = ({
 
           <ScrollView contentContainerStyle={{ padding: 20 }} showsVerticalScrollIndicator={false}>
             <Text style={{ fontSize: 12, fontWeight: '700', color: '#2563EB', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 14 }}>Sale Details</Text>
-            
+
             {/* Custom Visual Date Picker Trigger */}
             <View style={{ marginBottom: 14 }}>
               <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.4 }}>Date *</Text>
@@ -276,7 +276,7 @@ const SalesFormModal = ({
                 <Calendar size={16} color="#2563EB" />
               </TouchableOpacity>
             </View>
-            
+
             <View style={{ marginBottom: 14 }}>
               <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.4 }}>Order Type</Text>
               <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -303,7 +303,7 @@ const SalesFormModal = ({
                   </TouchableOpacity>
                 ))}
               </ScrollView>
-              
+
               {/* Campaign Discount Activation Badge */}
               {activeCampaign && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#EFF6FF', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, marginTop: 8, borderWidth: 1, borderColor: '#BFDBFE' }}>
@@ -350,7 +350,7 @@ const SalesFormModal = ({
                     <X size={16} color="#DC2626" />
                   </TouchableOpacity>
                 </View>
-                
+
                 <View style={{ flexDirection: 'row', gap: 12 }}>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 11, color: '#64748B', marginBottom: 5 }}>Quantity</Text>
@@ -435,8 +435,8 @@ const SalesFormModal = ({
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
-      
-      <ProductSelectionModal 
+
+      <ProductSelectionModal
         visible={productModalVisible}
         onClose={() => setProductModalVisible(false)}
         products={products}
@@ -447,7 +447,7 @@ const SalesFormModal = ({
           setProductModalVisible(false);
         }}
       />
-      
+
       <CalendarModal
         visible={calendarVisible}
         onClose={() => setCalendarVisible(false)}
@@ -466,7 +466,7 @@ const SaleCard = ({ sale, onEdit, onDelete }: { sale: Sale; onEdit: (s: Sale) =>
   const totalItems = sale.items.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
-    <View style={{ 
+    <View style={{
       marginBottom: 14, borderRadius: 16, backgroundColor: '#FFFFFF', padding: 16,
       borderWidth: 1, borderColor: '#F1F5F9',
       shadowColor: '#0F172A', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 3
@@ -477,14 +477,15 @@ const SaleCard = ({ sale, onEdit, onDelete }: { sale: Sale; onEdit: (s: Sale) =>
             <View style={{ backgroundColor: '#F8FAFC', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: '#E2E8F0' }}>
               <Text style={{ fontSize: 10, fontWeight: '700', color: '#64748B', letterSpacing: 0.5 }}>#{sale.id}</Text>
             </View>
-            <View style={{ backgroundColor: '#EFF6FF', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
-              <Text style={{ fontSize: 10, fontWeight: '700', color: '#2563EB', letterSpacing: 0.5 }}>{sale.type.toUpperCase()}</Text>
-            </View>
+
           </View>
           <Text style={{ fontSize: 16, fontWeight: '800', color: '#0F172A', marginBottom: 4 }}>{sale.city}</Text>
+          <View style={{ backgroundColor: '#EFF6FF', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
+            <Text style={{ fontSize: 10, fontWeight: '700', color: '#2563EB', letterSpacing: 0.5 }}>{sale.type.toUpperCase()}</Text>
+          </View>
           <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '500' }}>{totalItems} items · {sale.created_at ? new Date(sale.created_at).toLocaleDateString() : 'Today'}</Text>
         </View>
-        
+
         <View style={{ alignItems: 'flex-end', justifyContent: 'center' }}>
           <Text style={{ fontSize: 18, fontWeight: '900', color: '#0F172A' }}>₨ {finalAmount.toLocaleString()}</Text>
           {sale.discount_applied > 0 && (
@@ -494,7 +495,7 @@ const SaleCard = ({ sale, onEdit, onDelete }: { sale: Sale; onEdit: (s: Sale) =>
           )}
         </View>
       </View>
-      
+
       <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 8, marginTop: 4, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
         <TouchableOpacity onPress={() => onEdit(sale)} style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center' }}>
           <Pencil size={14} color="#2563EB" />

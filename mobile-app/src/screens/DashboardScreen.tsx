@@ -194,30 +194,28 @@ const LowStockSection = () => {
     <View className="mx-5 mb-6">
       <View className="flex-row justify-between items-center mb-3">
         <Text style={{ fontSize: 16, fontWeight: '700', color: '#0F172A' }}>Low Stock Alerts</Text>
-        <Text style={{ fontSize: 12, color: '#EA580C', fontWeight: '600' }}>{items.length} items</Text>
+        <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>{items.length} items</Text>
       </View>
-      <View className="rounded-2xl overflow-hidden" style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#FED7AA' }}>
+      <View className="rounded-2xl overflow-hidden" style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0' }}>
         {isLoading ? (
-          <View className="p-8 items-center"><ActivityIndicator color="#EA580C" /></View>
+          <View className="p-8 items-center"><ActivityIndicator color="#2563EB" /></View>
         ) : items.length === 0 ? (
-          <View style={{ backgroundColor: '#FFF7ED' }}>
-            <NoDataView message="All stock levels are healthy" />
-          </View>
+          <NoDataView message="All stock levels are healthy" />
         ) : (
           <View>
             {/* Table Header */}
-            <View style={{ flexDirection: 'row', backgroundColor: '#FFF7ED', paddingVertical: 10, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#FED7AA' }}>
-              <Text style={{ flex: 2, fontSize: 11, fontWeight: '700', color: '#B45309', textTransform: 'uppercase' }}>Product</Text>
-              <Text style={{ flex: 1, fontSize: 11, fontWeight: '700', color: '#B45309', textTransform: 'uppercase', textAlign: 'center' }}>City</Text>
-              <Text style={{ flex: 1, fontSize: 11, fontWeight: '700', color: '#B45309', textTransform: 'uppercase', textAlign: 'right' }}>Stock</Text>
+            <View style={{ flexDirection: 'row', backgroundColor: '#F8FAFC', paddingVertical: 10, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
+              <Text style={{ flex: 2, fontSize: 11, fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Product</Text>
+              <Text style={{ flex: 1, fontSize: 11, fontWeight: '700', color: '#475569', textTransform: 'uppercase', textAlign: 'center' }}>City</Text>
+              <Text style={{ flex: 1, fontSize: 11, fontWeight: '700', color: '#475569', textTransform: 'uppercase', textAlign: 'right' }}>Stock</Text>
             </View>
             {/* Table Rows */}
             {items.map((item, idx) => (
               <View key={`${item.product_id}-${item.city}`}
                 style={{
                   flexDirection: 'row', paddingVertical: 12, paddingHorizontal: 16,
-                  backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#FFFDFB',
-                  borderBottomWidth: idx < items.length - 1 ? 1 : 0, borderBottomColor: '#FFE0C0',
+                  backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC',
+                  borderBottomWidth: idx < items.length - 1 ? 1 : 0, borderBottomColor: '#F1F5F9',
                   alignItems: 'center'
                 }}>
                 <View style={{ flex: 2 }}>
@@ -226,7 +224,7 @@ const LowStockSection = () => {
                 </View>
                 <Text style={{ flex: 1, fontSize: 12, fontWeight: '600', color: '#475569', textAlign: 'center' }}>{item.city}</Text>
                 <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                  <Text style={{ fontSize: 14, fontWeight: '800', color: '#EA580C' }}>{item.quantity}</Text>
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: '#EF4444' }}>{item.quantity}</Text>
                   <Text style={{ fontSize: 9, color: '#94A3B8', marginTop: 1 }}>min: {item.threshold}</Text>
                 </View>
               </View>
@@ -253,8 +251,8 @@ const HighDemandSection = () => {
       <View className="flex-row justify-between items-center mb-3">
         <Text style={{ fontSize: 16, fontWeight: '700', color: '#0F172A' }}>High Demand Products</Text>
         <View className="flex-row items-center">
-          <Flame size={13} color="#EA580C" />
-          <Text style={{ fontSize: 12, color: '#EA580C', fontWeight: '600', marginLeft: 3 }}>Top {items.length}</Text>
+          <Flame size={13} color="#2563EB" />
+          <Text style={{ fontSize: 12, color: '#2563EB', fontWeight: '600', marginLeft: 3 }}>Top {items.length}</Text>
         </View>
       </View>
       <View className="rounded-2xl overflow-hidden" style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0' }}>
@@ -266,20 +264,21 @@ const HighDemandSection = () => {
           <View>
             {/* Table Header */}
             <View style={{ flexDirection: 'row', backgroundColor: '#F8FAFC', paddingVertical: 10, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
-              <Text style={{ flex: 0.5, fontSize: 11, fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Rank</Text>
-              <Text style={{ flex: 2, fontSize: 11, fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Product</Text>
-              <Text style={{ flex: 1, fontSize: 11, fontWeight: '700', color: '#64748B', textTransform: 'uppercase', textAlign: 'center' }}>Sold</Text>
-              <Text style={{ flex: 1.5, fontSize: 11, fontWeight: '700', color: '#64748B', textTransform: 'uppercase', textAlign: 'right' }}>Revenue</Text>
+              <Text style={{ flex: 0.5, fontSize: 11, fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Rank</Text>
+              <Text style={{ flex: 2, fontSize: 11, fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Product</Text>
+              <Text style={{ flex: 1, fontSize: 11, fontWeight: '700', color: '#475569', textTransform: 'uppercase', textAlign: 'center' }}>Sold</Text>
+              <Text style={{ flex: 1.5, fontSize: 11, fontWeight: '700', color: '#475569', textTransform: 'uppercase', textAlign: 'right' }}>Revenue</Text>
             </View>
             {/* Table Rows */}
             {items.map((item, idx) => (
               <View key={item.product_id}
                 style={{
                   flexDirection: 'row', paddingVertical: 12, paddingHorizontal: 16,
+                  backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC',
                   borderBottomWidth: idx < items.length - 1 ? 1 : 0, borderBottomColor: '#F1F5F9',
                   alignItems: 'center'
                 }}>
-                <Text style={{ flex: 0.5, fontSize: 13, fontWeight: '800', color: idx === 0 ? '#EF4444' : idx === 1 ? '#F97316' : '#2563EB' }}>#{idx + 1}</Text>
+                <Text style={{ flex: 0.5, fontSize: 13, fontWeight: '800', color: '#2563EB' }}>#{idx + 1}</Text>
                 <View style={{ flex: 2 }}>
                   <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }} numberOfLines={1}>{item.product_name}</Text>
                   <Text style={{ fontSize: 10, color: '#94A3B8', marginTop: 2 }}>{item.category}</Text>
@@ -360,16 +359,16 @@ const RecentAIActionsSection = () => {
 // ─── Weekly Sales Section ────────────────────────────────────────────────────
 
 const WeeklySalesSection = () => {
-  const { data, isLoading } = useQuery<{ points: { date: string; revenue: number; orders: number }[] }>({
+  const { data: weeklySalesData, isLoading } = useQuery<{ data: { day: string; revenue: number; orders: number }[] }>({
     queryKey: ['weekly-sales'],
     queryFn: dashboardApi.getWeeklySales,
   });
 
-  const points = data?.points || [];
+  const points = weeklySalesData?.data || [];
 
   const chartData = points.map(p => ({
     value: p.revenue / 1000, // display in thousands
-    label: new Date(p.date).toLocaleDateString([], { weekday: 'short' }),
+    label: p.day,
   }));
 
   const hasData = chartData.some(d => d.value > 0);
