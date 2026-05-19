@@ -107,7 +107,9 @@ async def run_execution(workflow_id: str):
             action_type=decision_raw.get("action_type", "no_action"),
             details=action_details,
             justification=decision_raw.get("justification", ""),
-            expected_impact=decision_raw.get("expected_impact", "")
+            expected_impact=decision_raw.get("expected_impact", ""),
+            confidence=decision_raw.get("confidence", 0.8),
+            risk=decision_raw.get("risk", "Low")
         )
         
         result_msg = await execute_action(db, decision)

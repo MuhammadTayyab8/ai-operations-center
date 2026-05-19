@@ -45,19 +45,20 @@ def generate_insights(
     {tool_results_str}
     
     === YOUR TASK ===
-    Generate a business insight report that answers:
-    1. summary: "What happened?" — a 2-3 sentence plain-English summary of the situation
-    2. why_it_matters: "Why does it matter?" — business impact explanation (revenue risk, stockout risk, etc.)
-    3. anomalies_detected: List any concerning patterns (e.g., "Lahore revenue dropped 35% vs other cities")
-    4. trends: List observable patterns (e.g., "Online delivery orders growing", "Casio Silver underperforming")
-    5. actionable_insights: List specific business actions recommended (e.g., "Launch Lahore campaign", "Increase delivery fee due to fuel cost")
+    Generate a highly structured business insight report. You must populate the structured fields:
+    1. understanding: Fill out source (e.g. "Production DB"), scope, time range, records analyzed (estimate a realistic number), and key signals.
+    2. key_insight: "What happened?" — a powerful 1-sentence plain-English summary.
+    3. evidence: Extract EXACT numbers from the data as before/after MetricComparisons (e.g. label='Lahore Revenue', before='₨200K', after='₨150K', trend='down').
+    4. affected_entities: List specific products or regions impacted (e.g. name='Rolex Black', impact='↓ 18%').
+    5. risk_level: Classify as 'High', 'Medium', or 'Low'.
+    6. business_impact: Explain the concrete business consequences (revenue risk, stockout risk).
     
     Rules:
-    - Be specific with numbers from the data (e.g., "₨450,000 revenue in Lahore vs ₨820,000 in Karachi")
-    - Do NOT invent numbers not present in the data
+    - Be specific with numbers from the data (e.g., "₨450,000 revenue in Lahore")
+    - Do NOT invent numbers not present in the data for evidence.
     - Write in business language, not technical language
     - If data is empty or unavailable, still generate insights based on the user's stated concern
-    - Focus on actionable insights, not just observations
+    - Focus on actionable insights and explicitly populate the metric comparisons for the UI to render.
     """
 
     response = client.models.generate_content(

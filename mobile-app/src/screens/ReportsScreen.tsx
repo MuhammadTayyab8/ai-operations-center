@@ -85,25 +85,18 @@ export const ReportsScreen = () => {
     return sales.filter(sale => {
       // City Filter
       const matchCity = selectedCity === 'All' || sale.city === selectedCity;
-      // Date preset
       if (!matchCity) return false;
       if (selectedDatePreset === 'All Time') return true;
       if (!sale.created_at) return true;
 
-      const saleDateStr = sale.created_at.split('T')[0]; // "YYYY-MM-DD"
-      const today = new Date();
-
-      const getPastDateStr = (days: number) => {
-        const d = new Date(today);
-        d.setDate(d.getDate() - days);
-        return d.toISOString().split('T')[0];
-      };
+      const saleDate = new Date(sale.created_at + (sale.created_at.endsWith('Z') ? '' : 'Z'));
+      const diffDays = (new Date().getTime() - saleDate.getTime()) / (1000 * 3600 * 24);
 
       if (selectedDatePreset === 'Last 7 Days') {
-        return saleDateStr >= getPastDateStr(7);
+        return diffDays <= 7 && diffDays >= -1;
       }
       if (selectedDatePreset === 'Last 30 Days') {
-        return saleDateStr >= getPastDateStr(30);
+        return diffDays <= 30 && diffDays >= -1;
       }
       return true;
     });
@@ -139,10 +132,24 @@ export const ReportsScreen = () => {
   }, [products]);
 
   const customersList = useMemo(() => {
-    const list = Array.isArray(crmData) ? crmData : [];
-    if (selectedCity === 'All') return list;
-    return list.filter((c: any) => c.city === selectedCity);
-  }, [crmData, selectedCity]);
+    let list = Array.isArray(crmData) ? crmData : [];
+    if (selectedCity !== 'All') {
+      list = list.filter((c: any) => c.city === selectedCity);
+    }
+    
+    if (selectedDatePreset !== 'All Time') {
+      list = list.filter((c: any) => {
+        if (!c.last_order || c.last_order === 'N/A') return true;
+        const orderDate = new Date(c.last_order + (c.last_order.endsWith('Z') ? '' : 'Z'));
+        const diffDays = (new Date().getTime() - orderDate.getTime()) / (1000 * 3600 * 24);
+        if (selectedDatePreset === 'Last 7 Days') return diffDays <= 7 && diffDays >= -1;
+        if (selectedDatePreset === 'Last 30 Days') return diffDays <= 30 && diffDays >= -1;
+        return true;
+      });
+    }
+    
+    return list;
+  }, [crmData, selectedCity, selectedDatePreset]);
 
   const crmSummary = useMemo(() => {
     const list = Array.isArray(crmData) ? crmData : [];

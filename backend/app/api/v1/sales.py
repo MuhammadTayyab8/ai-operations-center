@@ -56,13 +56,26 @@ def create_sale(sale_data: SaleCreate, db: firestore.Client = Depends(get_db)):
     sales_ref = db.collection("sales")
     doc_ref = sales_ref.document()
     
+    created_at_str = None
+    if sale_data.created_at:
+        try:
+            created_at_val = sale_data.created_at
+            if len(created_at_val) == 10:  # YYYY-MM-DD
+                created_at_val = f"{created_at_val}T12:00:00"
+            created_at_str = datetime.fromisoformat(created_at_val.replace("Z", "+00:00")).isoformat()
+        except Exception:
+            pass
+            
+    if not created_at_str:
+        created_at_str = datetime.utcnow().isoformat()
+    
     new_sale = {
         "customer_id": sale_data.customer_id,
         "type": sale_data.type,
         "total_amount": total_amount,
         "discount_applied": sale_data.discount_applied,
         "city": sale_data.city,
-        "created_at": datetime.utcnow().isoformat(),
+        "created_at": created_at_str,
         "id": doc_ref.id,
         "items": [],
         "customer_name": sale_data.customer_name,
@@ -131,13 +144,26 @@ def update_sale(sale_id: str, sale_data: SaleCreate, db: firestore.Client = Depe
         total_amount += delivery_fee
         
     # 3. Update sale document
+    created_at_str = None
+    if sale_data.created_at:
+        try:
+            created_at_val = sale_data.created_at
+            if len(created_at_val) == 10:  # YYYY-MM-DD
+                created_at_val = f"{created_at_val}T12:00:00"
+            created_at_str = datetime.fromisoformat(created_at_val.replace("Z", "+00:00")).isoformat()
+        except Exception:
+            pass
+            
+    if not created_at_str:
+        created_at_str = old_sale.get("created_at", datetime.utcnow().isoformat())
+
     updated_sale = {
         "customer_id": sale_data.customer_id,
         "type": sale_data.type,
         "total_amount": total_amount,
         "discount_applied": sale_data.discount_applied,
         "city": sale_data.city,
-        "created_at": old_sale.get("created_at", datetime.utcnow().isoformat()),
+        "created_at": created_at_str,
         "id": sale_id,
         "items": [],
         "customer_name": sale_data.customer_name,

@@ -29,11 +29,11 @@ def make_decision(
     Cities: Karachi, Lahore, Islamabad. Currency: PKR.
     
     === INSIGHT REPORT ===
-    Summary: {insight.summary}
-    Why It Matters: {insight.why_it_matters}
-    Anomalies: {insight.anomalies_detected}
-    Trends: {insight.trends}
-    Recommended Actions: {insight.actionable_insights}
+    Key Insight: {insight.key_insight}
+    Business Impact: {insight.business_impact}
+    Evidence: {[e.model_dump() for e in insight.evidence]}
+    Affected Entities: {[e.model_dump() for e in insight.affected_entities]}
+    Risk Level: {insight.risk_level}
     
     === DOMAIN ===
     {domain}
@@ -56,6 +56,8 @@ def make_decision(
     - Fill ONLY the relevant fields in ActionDetails for the chosen action_type
     - Leave unused fields as null
     - expected_impact: Quantify the expected benefit (e.g., "Recover 10-15% of Lahore revenue within 2 weeks")
+    - confidence: Float from 0.0 to 1.0 (e.g. 0.85) indicating how confident you are in this action.
+    - risk: 'Low', 'Medium', or 'High' based on the potential downside of the action.
     """
 
     response = client.models.generate_content(

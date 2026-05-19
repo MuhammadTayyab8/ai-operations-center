@@ -18,6 +18,7 @@ class SaleCreate(BaseModel):
     delivery_address: Optional[str] = None
     customer_phone: Optional[str] = None
     customer_email: Optional[str] = None
+    created_at: Optional[str] = None
 
 class SaleItemResponse(SaleItemCreate):
     id: Union[int, str]

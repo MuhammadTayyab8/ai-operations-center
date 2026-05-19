@@ -15,6 +15,7 @@ import { ScreenWrapper } from '../components/layout/ScreenWrapper';
 import { WorkflowTimeline } from '../components/operations/WorkflowTimeline';
 import { RecommendationCard } from '../components/operations/RecommendationCard';
 import { InsightSection } from '../components/operations/InsightSection';
+import { UnderstandingSection } from '../components/operations/UnderstandingSection';
 import { StateComparisonCard } from '../components/operations/StateComparisonCard';
 import { useAIWorkflowStore } from '../store/aiWorkflowStore';
 import { workflowsApi } from '../api/endpoints';
@@ -98,6 +99,10 @@ export const OperationsCenterScreen = () => {
             queryClient.invalidateQueries({ queryKey: ['dashboard-metrics'] });
             queryClient.invalidateQueries({ queryKey: ['products'] });
             queryClient.invalidateQueries({ queryKey: ['sales'] });
+            queryClient.invalidateQueries({ queryKey: ['weekly-sales'] });
+            queryClient.invalidateQueries({ queryKey: ['monthly-sales'] });
+            queryClient.invalidateQueries({ queryKey: ['low-stock'] });
+            queryClient.invalidateQueries({ queryKey: ['high-demand'] });
           }
         }
       }
@@ -355,6 +360,9 @@ export const OperationsCenterScreen = () => {
 
             {/* Live Timeline */}
             <WorkflowTimeline />
+
+            {/* Understanding Section */}
+            <UnderstandingSection />
 
             {/* Insight Section */}
             <InsightSection />

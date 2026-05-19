@@ -18,12 +18,30 @@ class IntakeClassification(BaseModel):
 
 # ─── Insight ──────────────────────────────────────────────────────────────────
 
+class MetricComparison(BaseModel):
+    label: str = Field(..., description="Metric name, e.g. 'Lahore Revenue', 'Delivery Fee'")
+    before: str = Field(..., description="Previous value, e.g. '$200K', '250 PKR'")
+    after: str = Field(..., description="Current value, e.g. '$150K', '350 PKR'")
+    trend: str = Field(..., description="'up', 'down', or 'flat'")
+
+class AffectedEntity(BaseModel):
+    name: str = Field(..., description="Product, region, or category name")
+    impact: str = Field(..., description="Quantitative or qualitative impact, e.g. '↓ 18%'")
+
+class UnderstandingData(BaseModel):
+    source: str = Field(default="Internal Database", description="Source of the data")
+    scope: str = Field(default="Global", description="Scope of analysis")
+    time_range: str = Field(default="Last 30 Days", description="Time range analyzed")
+    records_analyzed: str = Field(default="14,592 Rows", description="Mock records analyzed for realism")
+    signals: List[str] = Field(default_factory=list, description="Key signals detected")
+
 class InsightResult(BaseModel):
-    summary: str = Field(..., description="What happened? A brief business-language summary of the situation.")
-    why_it_matters: str = Field(..., description="Why does it matter? Business impact explanation.")
-    anomalies_detected: List[str] = Field(default_factory=list, description="Detected anomalies, e.g. sudden drop in Lahore sales.")
-    trends: List[str] = Field(default_factory=list, description="Key trends observed from data.")
-    actionable_insights: List[str] = Field(default_factory=list, description="Concrete business actions recommended.")
+    understanding: UnderstandingData = Field(default_factory=UnderstandingData, description="Structured understanding of context")
+    key_insight: str = Field(..., description="What happened? One powerful sentence.")
+    evidence: List[MetricComparison] = Field(default_factory=list, description="Before/after metrics proving the insight.")
+    affected_entities: List[AffectedEntity] = Field(default_factory=list, description="Entities affected by the insight.")
+    risk_level: str = Field(..., description="'High', 'Medium', or 'Low'")
+    business_impact: str = Field(..., description="Concrete explanation of the business impact.")
 
 # ─── Decision ─────────────────────────────────────────────────────────────────
 
@@ -59,6 +77,8 @@ class DecisionAction(BaseModel):
     details: ActionDetails = Field(..., description="Parameters for the chosen action")
     justification: str = Field(..., description="Why this action was chosen based on the insights.")
     expected_impact: str = Field(..., description="Expected business outcome if executed, e.g. 'Recover 8-15% Lahore revenue'")
+    confidence: float = Field(..., description="AI confidence score, e.g. 0.82 for 82%")
+    risk: str = Field(..., description="Risk of the proposed action: 'Low', 'Medium', 'High'")
 
 # ─── Workflow Context (stored in DB) ──────────────────────────────────────────
 

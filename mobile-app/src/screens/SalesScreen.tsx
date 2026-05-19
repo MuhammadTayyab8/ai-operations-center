@@ -27,6 +27,12 @@ const getTotalStock = (p: Product) => {
   return p.inventory.reduce((sum: number, i: any) => sum + (i.quantity || 0), 0);
 };
 
+const getCityStock = (p: Product, city: string) => {
+  if (!p?.inventory) return 0;
+  const inv = p.inventory.find((i: any) => i.city.toLowerCase() === city.toLowerCase());
+  return inv ? (inv.quantity || 0) : 0;
+};
+
 // ─── Components ───────────────────────────────────────────────────────────────
 
 const NoData = ({ message }: { message: string }) => (
@@ -55,7 +61,7 @@ const InputField = ({ label, value, onChangeText, placeholder, keyboardType = 'd
 
 // ─── Product Selection Modal ──────────────────────────────────────────────────
 
-const ProductSelectionModal = ({ visible, onClose, onSelect, products }: { visible: boolean, onClose: () => void, onSelect: (p: Product) => void, products: Product[] }) => {
+const ProductSelectionModal = ({ visible, onClose, onSelect, products, city }: { visible: boolean, onClose: () => void, onSelect: (p: Product) => void, products: Product[], city: string }) => {
   const [search, setSearch] = useState('');
 
   const filtered = useMemo(() => {
@@ -101,7 +107,7 @@ const ProductSelectionModal = ({ visible, onClose, onSelect, products }: { visib
               >
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 15, fontWeight: '700', color: '#0F172A' }}>{item.name}</Text>
-                  <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>SKU: {item.sku} · Stock: {getTotalStock(item)}</Text>
+                  <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>SKU: {item.sku} · Stock ({city}): {getCityStock(item, city)} · Price: ₨ {item.base_price || 0}</Text>
                 </View>
                 <Text style={{ fontSize: 15, fontWeight: '800', color: '#2563EB' }}>₨ {item.base_price}</Text>
               </TouchableOpacity>
@@ -213,6 +219,7 @@ const SalesFormModal = ({
         delivery_address: orderType === 'Online Delivery' ? deliveryAddress.trim() : null,
         customer_phone: orderType === 'Online Delivery' ? customerPhone.trim() : null,
         customer_email: orderType === 'Online Delivery' ? customerEmail.trim() : null,
+        created_at: date,
       };
 
       if (isEdit && editSale) {
@@ -344,7 +351,7 @@ const SalesFormModal = ({
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 15, fontWeight: '700', color: '#0F172A', marginBottom: 4 }}>{item.product?.name || 'Unknown Product'}</Text>
-                    <Text style={{ fontSize: 12, color: '#64748B' }}>Stock Qty: {item.product ? getTotalStock(item.product) : '-'}</Text>
+                    <Text style={{ fontSize: 12, color: '#64748B' }}>Stock ({city}): {item.product ? getCityStock(item.product, city) : '-'} · Price: ₨ {item.unit_price || 0}</Text>
                   </View>
                   <TouchableOpacity onPress={() => removeItem(idx)} style={{ padding: 4 }}>
                     <X size={16} color="#DC2626" />
@@ -440,6 +447,7 @@ const SalesFormModal = ({
         visible={productModalVisible}
         onClose={() => setProductModalVisible(false)}
         products={products}
+        city={city}
         onSelect={(p) => {
           if (!items.find(i => i.product_id === p.id)) {
             setItems([...items, { product_id: p.id, quantity: 1, unit_price: p.base_price, discount: 0, product: p }]);
@@ -571,6 +579,8 @@ export const SalesScreen = () => {
     queryClient.invalidateQueries({ queryKey: ['dashboard-metrics'] });
     queryClient.invalidateQueries({ queryKey: ['low-stock'] });
     queryClient.invalidateQueries({ queryKey: ['high-demand'] });
+    queryClient.invalidateQueries({ queryKey: ['weekly-sales'] });
+    queryClient.invalidateQueries({ queryKey: ['monthly-sales'] });
   };
 
   return (
