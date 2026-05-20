@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   ScrollView, View, Text, TouchableOpacity, RefreshControl, ActivityIndicator,
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   TrendingUp, Megaphone, AlertTriangle, BrainCircuit,
   ChevronRight, CheckCircle2, Clock, Zap, Package,
@@ -76,10 +77,17 @@ const MonthlySalesSection = () => {
   const [showYearPicker, setShowYearPicker] = useState(false);
   const [selectedBar, setSelectedBar] = useState<{ month: string; revenue: number } | null>(null);
 
-  const { data, isLoading } = useQuery<{ data: MonthlySalesPoint[] }>({
+  const { data, isLoading, refetch } = useQuery<{ data: MonthlySalesPoint[] }>({
     queryKey: ['monthly-sales', year],
     queryFn: () => dashboardApi.getMonthlySales(year),
+    refetchInterval: 10000,
   });
+
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
 
   const chartData = (data?.data || []).map(d => ({
     value: d.revenue / 1000,  // show in thousands
@@ -183,10 +191,17 @@ const NoDataView = ({ message }: { message: string }) => (
 // ─── Low Stock Section ────────────────────────────────────────────────────────
 
 const LowStockSection = () => {
-  const { data, isLoading } = useQuery<{ items: LowStockItem[] }>({
+  const { data, isLoading, refetch } = useQuery<{ items: LowStockItem[] }>({
     queryKey: ['low-stock'],
     queryFn: dashboardApi.getLowStock,
+    refetchInterval: 3000,
   });
+
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
 
   const items = data?.items || [];
 
@@ -239,10 +254,17 @@ const LowStockSection = () => {
 // ─── High Demand Section ──────────────────────────────────────────────────────
 
 const HighDemandSection = () => {
-  const { data, isLoading } = useQuery<{ items: HighDemandItem[] }>({
+  const { data, isLoading, refetch } = useQuery<{ items: HighDemandItem[] }>({
     queryKey: ['high-demand'],
     queryFn: dashboardApi.getHighDemand,
+    refetchInterval: 5000,
   });
+
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
 
   const items = data?.items || [];
 
@@ -303,10 +325,17 @@ const ACTION_STATUS_CONFIG: Record<string, { color: string; bg: string; icon: Re
 };
 
 const RecentAIActionsSection = () => {
-  const { data: workflows = [], isLoading } = useQuery<any[]>({
+  const { data: workflows = [], isLoading, refetch } = useQuery<any[]>({
     queryKey: ['workflows'],
     queryFn: workflowsApi.getAll,
+    refetchInterval: 3000,
   });
+
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
 
   const displayList = workflows.slice(0, 3); // show top 3
 
@@ -359,10 +388,17 @@ const RecentAIActionsSection = () => {
 // ─── Weekly Sales Section ────────────────────────────────────────────────────
 
 const WeeklySalesSection = () => {
-  const { data: weeklySalesData, isLoading } = useQuery<{ data: { day: string; revenue: number; orders: number }[] }>({
+  const { data: weeklySalesData, isLoading, refetch } = useQuery<{ data: { day: string; revenue: number; orders: number }[] }>({
     queryKey: ['weekly-sales'],
     queryFn: dashboardApi.getWeeklySales,
+    refetchInterval: 10000,
   });
+
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
 
   const points = weeklySalesData?.data || [];
 
@@ -434,7 +470,14 @@ export const DashboardScreen = () => {
   const { data: metrics, isLoading, isRefetching, refetch } = useQuery<Metrics>({
     queryKey: ['dashboard-metrics'],
     queryFn: dashboardApi.getMetrics,
+    refetchInterval: 3000,
   });
+
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
 
   const fmt = (n: number) => n >= 1000000 ? `₨${(n / 1000000).toFixed(1)}M` : n >= 1000 ? `₨${(n / 1000).toFixed(0)}K` : `₨${n}`;
 

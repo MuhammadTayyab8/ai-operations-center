@@ -65,7 +65,8 @@ def get_workflow_status(workflow_id: str, db: firestore.Client = Depends(get_db)
     return WorkflowStatusResponse(
         id=workflow_data.get("id", workflow_id),
         status=workflow_data.get("status"),
-        context_data=workflow_data.get("context_data")
+        context_data=workflow_data.get("context_data"),
+        action_log=workflow_data.get("action_log")
     )
 
 @router.post("/{workflow_id}/approve")

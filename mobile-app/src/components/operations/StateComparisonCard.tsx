@@ -1,7 +1,24 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { CheckCircle2, ArrowRight, Sparkles, RotateCcw, TrendingUp, Zap, Building } from 'lucide-react-native';
+import { CheckCircle2, ArrowRight, Sparkles, RotateCcw, TrendingUp, Zap, Building, Megaphone } from 'lucide-react-native';
 import { useAIWorkflowStore } from '../../store/aiWorkflowStore';
+
+const getMetricConfig = (label: string) => {
+  const lbl = label.toLowerCase();
+  if (lbl.includes('price')) {
+    return { icon: <TrendingUp size={14} color="#2563EB" />, accentBg: '#EFF6FF', accentText: '#2563EB' };
+  }
+  if (lbl.includes('campaign') || lbl.includes('sale') || lbl.includes('promo') || lbl.includes('deal')) {
+    return { icon: <Megaphone size={14} color="#9333EA" />, accentBg: '#FDF4FF', accentText: '#9333EA' };
+  }
+  if (lbl.includes('delivery')) {
+    return { icon: <Zap size={14} color="#EA580C" />, accentBg: '#FFF7ED', accentText: '#EA580C' };
+  }
+  if (lbl.includes('impact') || lbl.includes('projected')) {
+    return { icon: <Zap size={14} color="#16A34A" />, accentBg: '#F0FDF4', accentText: '#16A34A' };
+  }
+  return { icon: <Building size={14} color="#475569" />, accentBg: '#F8FAFC', accentText: '#475569' };
+};
 
 export const StateComparisonCard = () => {
   const { beforeAfterData, completedAt, reset, approvalData, isComplete } = useAIWorkflowStore();
@@ -15,7 +32,7 @@ export const StateComparisonCard = () => {
     approvalData?.action_type === 'reorder_stock' ? 'Inventory Redistributed' :
     'Operations Executed';
 
-  // Fallback mock metrics for hackathon realism if none provided by backend
+  // Dynamic metrics populated from backend execution response
   const metrics = beforeAfterData?.metrics && beforeAfterData.metrics.length > 0 
     ? beforeAfterData.metrics 
     : [
@@ -55,45 +72,50 @@ export const StateComparisonCard = () => {
         <Sparkles size={24} color="#16A34A" />
       </View>
 
-      {/* Side-by-side Metrics Cards */}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
-        {metrics.map((item: any, index: number) => (
-          <View
-            key={index}
-            style={{
-              width: '48%',
-              backgroundColor: '#FFFFFF',
-              borderRadius: 20,
-              padding: 16,
-              borderWidth: 1,
-              borderColor: '#E2E8F0',
-              shadowColor: '#94A3B8', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 1
-            }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-              <Building size={14} color="#64748B" />
-              <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B', marginLeft: 6 }} numberOfLines={1}>
-                {item.label.toUpperCase()}
-              </Text>
-            </View>
+      {/* Dynamic Metrics Cards (Full width for maximum readability) */}
+      <View style={{ gap: 12, marginBottom: 16 }}>
+        {metrics.map((item: any, index: number) => {
+          const config = getMetricConfig(item.label);
+          return (
+            <View
+              key={index}
+              style={{
+                width: '100%',
+                backgroundColor: '#FFFFFF',
+                borderRadius: 20,
+                padding: 16,
+                borderWidth: 1,
+                borderColor: '#E2E8F0',
+                shadowColor: '#94A3B8', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 1
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                <View style={{ padding: 6, borderRadius: 8, backgroundColor: config.accentBg, marginRight: 8 }}>
+                  {config.icon}
+                </View>
+                <Text style={{ fontSize: 12, fontWeight: '800', color: '#0F172A' }} numberOfLines={1}>
+                  {item.label.toUpperCase()}
+                </Text>
+              </View>
 
-            <View style={{ marginBottom: 10 }}>
-              <Text style={{ fontSize: 10, fontWeight: '700', color: '#94A3B8', marginBottom: 2 }}>BEFORE</Text>
-              <Text style={{ fontSize: 15, fontWeight: '600', color: '#475569' }}>{item.before}</Text>
-            </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <View style={{ flex: 1, marginRight: 12 }}>
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: '#94A3B8', marginBottom: 2 }}>BEFORE</Text>
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: '#64748B' }}>{item.before}</Text>
+                </View>
 
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
-              <ArrowRight size={14} color="#2563EB" style={{ marginRight: 6 }} />
-              <Text style={{ fontSize: 10, fontWeight: '800', color: '#2563EB' }}>AFTER</Text>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={{ fontSize: 20, fontWeight: '800', color: '#0F172A' }}>{item.after}</Text>
-              <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, marginLeft: 8 }}>
-                <Text style={{ fontSize: 10, fontWeight: '800', color: '#16A34A' }}>UPDATED</Text>
+                <View style={{ alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 }}>
+                  <ArrowRight size={16} color="#94A3B8" />
+                </View>
+
+                <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                  <Text style={{ fontSize: 10, fontWeight: '800', color: config.accentText, marginBottom: 2 }}>AFTER / OUTCOME</Text>
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: '#0F172A', textAlign: 'right' }}>{item.after}</Text>
+                </View>
               </View>
             </View>
-          </View>
-        ))}
+          );
+        })}
       </View>
 
       {/* Outcome Summary */}

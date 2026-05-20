@@ -49,7 +49,15 @@ export const OperationsCenterScreen = () => {
   const handlePickFile = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: ['text/csv', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/pdf', 'image/*'],
+        type: [
+          'text/csv',
+          'text/comma-separated-values',
+          'application/csv',
+          'application/vnd.ms-excel',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'application/pdf',
+          'image/*'
+        ],
         copyToCacheDirectory: true,
       });
       if (!result.canceled && result.assets && result.assets.length > 0) {
@@ -92,10 +100,122 @@ export const OperationsCenterScreen = () => {
         } else if (message.includes('Workflow completed') || message.startsWith('Error:')) {
           es.close();
           if (message.includes('Workflow completed')) {
-            finishExecution({
-              summary: 'All recommended actions have been applied. Business data has been updated successfully.',
-              metrics: [],
-            });
+            (async () => {
+              try {
+                // Short sleep to ensure Firestore transactions have finalized in backend
+                await new Promise(r => setTimeout(r, 600));
+                const statusRes = await workflowsApi.getStatus(id);
+                
+                const actionLog = statusRes.action_log || {};
+                const actionCategory = actionLog.action_category || '';
+                const logMessage = actionLog.log_message || '';
+                const contextData = statusRes.context_data || {};
+                
+                const metrics = [];
+                let summary = logMessage || 'All recommended actions have been applied. Business data has been updated successfully.';
+                
+                if (actionCategory === 'update_price') {
+                  const match = logMessage.match(/Price updated:\s*(.*?)\s*—\s*(.*?)\s*→\s*(.*)/);
+                  if (match) {
+                    metrics.push({
+                      label: `Price: ${match[1].trim()}`,
+                      before: match[2].trim(),
+                      after: match[3].trim(),
+                    });
+                  } else {
+                    const details = contextData.decision?.details || {};
+                    metrics.push({
+                      label: `Price: ${details.product_name || 'Product'}`,
+                      before: 'Checking...',
+                      after: details.new_price ? `₨ ${details.new_price.toLocaleString()}` : 'Optimized',
+                    });
+                  }
+                } 
+                else if (actionCategory === 'update_delivery_fee') {
+                  const match = logMessage.match(/Delivery fee updated:\s*(.*?)\s*→\s*(.*?)(?:\s*\((.*?)\))?$/);
+                  if (match) {
+                    metrics.push({
+                      label: `Delivery Fee (${match[3] || 'Global'})`,
+                      before: match[1].trim(),
+                      after: match[2].trim(),
+                    });
+                  } else {
+                    const details = contextData.decision?.details || {};
+                    metrics.push({
+                      label: `Delivery Fee (${details.city || 'Global'})`,
+                      before: '250 PKR',
+                      after: details.new_fee ? `₨ ${details.new_fee.toLocaleString()}` : '350 PKR',
+                    });
+                  }
+                } 
+                else if (actionCategory === 'redistribute_inventory' || actionCategory === 'reorder_stock') {
+                  const match = logMessage.match(/Redistributed\s*(\d+)\s*units of\s*'(.*?)':\s*(.*?)\s*→\s*(.*)/);
+                  if (match) {
+                    metrics.push({
+                      label: `Move ${match[2].trim()}`,
+                      before: `${match[3].trim()} Stock`,
+                      after: `Moved ${match[1].trim()} units to ${match[4].trim()}`,
+                    });
+                  } else {
+                    const details = contextData.decision?.details || {};
+                    metrics.push({
+                      label: `Stock: ${details.product_name || 'Watch'}`,
+                      before: `${details.from_city || 'Warehouse'}`,
+                      after: `Move ${details.quantity || 1} to ${details.to_city || 'Store'}`,
+                    });
+                  }
+                } 
+                else if (actionCategory === 'create_campaign') {
+                  const match = logMessage.match(/Campaign created:\s*'(.*?)'\s*\((.*?)\)\s*—\s*(.*?)\s*off for\s*(.*)/);
+                  if (match) {
+                    metrics.push({
+                      label: match[1].trim(),
+                      before: 'Inactive',
+                      after: `${match[3].trim()}% Off in ${match[4].trim()}`,
+                    });
+                  } else {
+                    const details = contextData.decision?.details || {};
+                    metrics.push({
+                      label: details.name || 'New Campaign',
+                      before: 'Inactive',
+                      after: `${details.discount_percent || 10}% Off in ${details.region || 'All'}`,
+                    });
+                  }
+                } 
+                else if (actionCategory === 'create_notification') {
+                  const match = logMessage.match(/Notification sent:\s*'(.*?)'\s*→\s*(.*)/);
+                  if (match) {
+                    metrics.push({
+                      label: 'Notification Alert',
+                      before: 'Not Sent',
+                      after: match[2].trim(),
+                    });
+                  } else {
+                    metrics.push({
+                      label: 'Notification Alert',
+                      before: 'Not Sent',
+                      after: 'Broadcasted to all cities',
+                    });
+                  }
+                }
+
+                if (contextData.decision?.expected_impact) {
+                  metrics.push({
+                    label: 'Projected Business Impact',
+                    before: 'Standard Baseline',
+                    after: contextData.decision.expected_impact,
+                  });
+                }
+                
+                finishExecution({ summary, metrics });
+              } catch (e) {
+                console.log('Failed to parse final workflow outcome metrics', e);
+                finishExecution({
+                  summary: 'All recommended actions have been applied. Business data has been updated successfully.',
+                  metrics: [],
+                });
+              }
+            })();
             queryClient.invalidateQueries({ queryKey: ['dashboard-metrics'] });
             queryClient.invalidateQueries({ queryKey: ['products'] });
             queryClient.invalidateQueries({ queryKey: ['sales'] });

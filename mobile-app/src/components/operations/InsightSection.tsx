@@ -29,52 +29,57 @@ export const InsightSection = () => {
       </Text>
 
       {/* Evidence Section */}
-      <View className="mb-4 pt-4" style={{ borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
-        <View className="flex-row items-center mb-3">
+      <View style={{ marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
           <BarChart3 size={14} color="#64748B" />
           <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B', marginLeft: 6, letterSpacing: 0.5 }}>EVIDENCE</Text>
         </View>
         
         {insight.evidence && insight.evidence.length > 0 ? (
           insight.evidence.map((metric: any, idx: number) => {
-            // Very simple mock bar logic for visualization based on trend
             const beforeWidth = metric.trend === 'down' ? '100%' : '75%';
             const afterWidth = metric.trend === 'down' ? '75%' : '100%';
-            const afterColor = metric.trend === 'down' ? 'bg-red-500' : metric.trend === 'up' ? 'bg-green-500' : 'bg-blue-500';
+            const afterColor = metric.trend === 'down' ? '#EF4444' : metric.trend === 'up' ? '#10B981' : '#3B82F6';
             
             return (
-              <View key={idx} className="mb-4">
-                <Text style={{ fontSize: 13, fontWeight: '700', color: '#334155', marginBottom: 6 }} numberOfLines={2}>{metric.label}</Text>
-                <View className="mb-2">
-                  <View className="flex-row justify-between mb-1">
-                    <Text style={{ flex: 1, fontSize: 12, color: '#475569', fontWeight: '500', marginRight: 8 }}>Previous</Text>
-                    <Text style={{ fontSize: 12, color: '#0F172A', fontWeight: '700' }}>{metric.before}</Text>
+              <View key={idx} style={{ marginBottom: 16 }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#334155', marginBottom: 8 }} numberOfLines={2}>{metric.label}</Text>
+                
+                {/* 2-Column Grid Layout for Side-by-Side Comparison */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
+                  {/* Previous State Column (Grid 1) */}
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600' }}>Previous</Text>
+                      <Text style={{ fontSize: 11, color: '#475569', fontWeight: '700' }}>{metric.before}</Text>
+                    </View>
+                    <View style={{ height: 6, backgroundColor: '#E2E8F0', borderRadius: 3, overflow: 'hidden' }}>
+                      <View style={{ height: '100%', backgroundColor: '#94A3B8', width: beforeWidth }} />
+                    </View>
                   </View>
-                  <View className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <View className={`h-full bg-slate-400`} style={{ width: beforeWidth }} />
-                  </View>
-                </View>
 
-                <View>
-                  <View className="flex-row justify-between mb-1">
-                    <Text style={{ flex: 1, fontSize: 12, color: '#475569', fontWeight: '500', marginRight: 8 }}>Current</Text>
-                    <Text style={{ fontSize: 12, color: '#0F172A', fontWeight: '700' }}>{metric.after}</Text>
-                  </View>
-                  <View className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <View className={`h-full ${afterColor}`} style={{ width: afterWidth }} />
+                  {/* Current State Column (Grid 2) */}
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600' }}>Current</Text>
+                      <Text style={{ fontSize: 11, color: afterColor, fontWeight: '700' }}>{metric.after}</Text>
+                    </View>
+                    <View style={{ height: 6, backgroundColor: '#E2E8F0', borderRadius: 3, overflow: 'hidden' }}>
+                      <View style={{ height: '100%', backgroundColor: afterColor, width: afterWidth }} />
+                    </View>
                   </View>
                 </View>
               </View>
             );
           })
         ) : (
-          <View className="mb-2">
-            <View className="flex-row justify-between mb-1">
+          <View style={{ marginBottom: 12 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
               <Text style={{ fontSize: 12, color: '#475569', fontWeight: '500' }}>Previous Period</Text>
               <Text style={{ fontSize: 12, color: '#0F172A', fontWeight: '700' }}>$200K</Text>
             </View>
-            <View className="h-2 bg-slate-100 rounded-full overflow-hidden">
-              <View className="h-full bg-slate-400" style={{ width: '100%' }} />
+            <View style={{ height: 6, backgroundColor: '#E2E8F0', borderRadius: 3, overflow: 'hidden' }}>
+              <View style={{ height: '100%', backgroundColor: '#94A3B8', width: '100%' }} />
             </View>
           </View>
         )}
@@ -82,28 +87,32 @@ export const InsightSection = () => {
 
       {/* Affected Entities */}
       {(insight.affected_entities && insight.affected_entities.length > 0) ? (
-        <View className="mb-4 pt-4" style={{ borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
-           <View className="flex-row items-center mb-2">
+        <View style={{ marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
+           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
              <PackageX size={14} color="#64748B" />
              <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B', marginLeft: 6, letterSpacing: 0.5 }}>AFFECTED ENTITIES</Text>
            </View>
            {insight.affected_entities.map((entity: any, i: number) => (
-             <View key={i} className="flex-row justify-between items-start mb-1">
-               <Text style={{ flex: 1, fontSize: 13, color: '#334155', marginRight: 8 }}>• {entity.name}</Text>
-               <Text style={{ flexShrink: 0, fontSize: 12, fontWeight: '600', color: '#DC2626', marginTop: 1 }}>{entity.impact}</Text>
+             <View key={i} style={{ marginVertical: 4 }}>
+               <Text style={{ fontSize: 13, color: '#334155', lineHeight: 18 }}>
+                 <Text style={{ fontWeight: '600' }}>• {entity.name}</Text>
+                 <Text style={{ fontWeight: '700', color: '#DC2626' }}>  ({entity.impact})</Text>
+               </Text>
              </View>
            ))}
         </View>
       ) : (insight.anomalies_detected && insight.anomalies_detected.length > 0) ? (
-        <View className="mb-4 pt-4" style={{ borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
-           <View className="flex-row items-center mb-2">
+        <View style={{ marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
+           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
              <PackageX size={14} color="#64748B" />
              <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B', marginLeft: 6, letterSpacing: 0.5 }}>AFFECTED PRODUCTS</Text>
            </View>
            {insight.anomalies_detected.map((anomaly: string, i: number) => (
-             <View key={i} className="flex-row justify-between items-start mb-1">
-               <Text style={{ flex: 1, fontSize: 13, color: '#334155', marginRight: 8 }}>• {anomaly.replace(/critical|high|medium|low/i, '').trim()}</Text>
-               <Text style={{ flexShrink: 0, fontSize: 12, fontWeight: '600', color: '#DC2626', marginTop: 1 }}>↓ Impacted</Text>
+             <View key={i} style={{ marginVertical: 4 }}>
+               <Text style={{ fontSize: 13, color: '#334155', lineHeight: 18 }}>
+                 <Text style={{ fontWeight: '600' }}>• {anomaly.replace(/critical|high|medium|low/i, '').trim()}</Text>
+                 <Text style={{ fontWeight: '700', color: '#DC2626' }}>  (Impacted)</Text>
+               </Text>
              </View>
            ))}
         </View>

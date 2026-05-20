@@ -11,3 +11,4 @@ class WorkflowStatusResponse(BaseModel):
     id: Union[int, str]
     status: str
     context_data: Optional[Dict[str, Any]] = None
+    action_log: Optional[Dict[str, Any]] = None

@@ -73,9 +73,50 @@ export const ReportsScreen = () => {
 
   // ─── Document Export Animation Loop ─────────────────────────────────────────
   const triggerExport = (type: 'PDF' | 'Excel') => {
+    if (exporting) return;
     setExportType(type);
     setExportProgress(0);
     setExporting(true);
+
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += 10;
+      setExportProgress(progress);
+      if (progress >= 100) {
+        clearInterval(interval);
+        setTimeout(async () => {
+          try {
+            const isPDF = type === 'PDF';
+            const fileExtension = isPDF ? 'html' : 'csv';
+            const mimeType = isPDF ? 'text/html' : 'text/csv';
+            const fileContent = isPDF ? generateHTMLContent() : generateCSVContent();
+            const fileName = `${activeReport}_report_${Date.now()}.${fileExtension}`;
+            const docDirectory = (FileSystem as any).documentDirectory;
+            const fileUri = `${docDirectory}${fileName}`;
+
+            await FileSystem.writeAsStringAsync(fileUri, fileContent, {
+              encoding: FileSystem?.EncodingType?.UTF8
+            });
+
+            const sharingAvailable = await Sharing.isAvailableAsync();
+            if (sharingAvailable) {
+              await Sharing.shareAsync(fileUri, {
+                mimeType: mimeType,
+                dialogTitle: `Export ${type} Report`,
+                UTI: isPDF ? 'public.html' : 'public.comma-separated-values-text'
+              });
+            } else {
+              Alert.alert('Unsupported', 'Sharing is not supported on this device platform.');
+            }
+          } catch (err) {
+            console.log('Error generating or sharing report:', err);
+            Alert.alert('Export Failed', 'An error occurred while compiling and saving the document.');
+          } finally {
+            setExporting(false);
+          }
+        }, 400);
+      }
+    }, 150);
   };
 
 
@@ -332,50 +373,7 @@ export const ReportsScreen = () => {
     `;
   };
 
-  useEffect(() => {
-    if (!exporting) return;
-    const interval = setInterval(() => {
-      setExportProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setTimeout(async () => {
-            setExporting(false);
 
-            try {
-              const isPDF = exportType === 'PDF';
-              const fileExtension = isPDF ? 'html' : 'csv';
-              const mimeType = isPDF ? 'text/html' : 'text/csv';
-              const fileContent = isPDF ? generateHTMLContent() : generateCSVContent();
-              const fileName = `${activeReport}_report_${Date.now()}.${fileExtension}`;
-              const docDirectory = (FileSystem as any).documentDirectory;
-              const fileUri = `${docDirectory}${fileName}`;
-
-              await FileSystem.writeAsStringAsync(fileUri, fileContent, {
-                encoding: FileSystem?.EncodingType?.UTF8
-              });
-
-              const sharingAvailable = await Sharing.isAvailableAsync();
-              if (sharingAvailable) {
-                await Sharing.shareAsync(fileUri, {
-                  mimeType: mimeType,
-                  dialogTitle: `Export ${exportType} Report`,
-                  UTI: isPDF ? 'public.html' : 'public.comma-separated-values-text'
-                });
-              } else {
-                Alert.alert('Unsupported', 'Sharing is not supported on this device platform.');
-              }
-            } catch (err) {
-              console.log('Error generating or sharing report:', err);
-              Alert.alert('Export Failed', 'An error occurred while compiling and saving the document.');
-            }
-          }, 400);
-          return 100;
-        }
-        return prev + 10;
-      });
-    }, 150);
-    return () => clearInterval(interval);
-  }, [exporting, exportType, activeReport, filteredSales, products, customersList, salesSummary, inventorySummary, crmSummary]);
 
   // ─── Render Sub-components ─────────────────────────────────────────────────
 
@@ -557,14 +555,32 @@ export const ReportsScreen = () => {
             <View style={{ flexDirection: 'row', gap: 6 }}>
               <TouchableOpacity
                 onPress={() => triggerExport('PDF')}
-                style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#EF4444', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10 }}
+                disabled={exporting}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: '#EF4444',
+                  paddingHorizontal: 10,
+                  paddingVertical: 8,
+                  borderRadius: 10,
+                  opacity: exporting ? 0.6 : 1
+                }}
               >
                 <Download size={13} color="#FFF" />
                 <Text style={{ fontSize: 11, fontWeight: '700', color: '#FFF', marginLeft: 4 }}>PDF</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => triggerExport('Excel')}
-                style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#16A34A', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10 }}
+                disabled={exporting}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: '#16A34A',
+                  paddingHorizontal: 10,
+                  paddingVertical: 8,
+                  borderRadius: 10,
+                  opacity: exporting ? 0.6 : 1
+                }}
               >
                 <Download size={13} color="#FFF" />
                 <Text style={{ fontSize: 11, fontWeight: '700', color: '#FFF', marginLeft: 4 }}>Excel</Text>
